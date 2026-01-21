@@ -1,9 +1,8 @@
-import { CONFIG } from "../config.js";
-const API_URL = CONFIG.apiUrl;
+const API_URL = "http://localhost:8000";
 
 const DEFAULT_SETTINGS = {
-  targetLang: CONFIG.DEFAULT_TARGET_LANG,
-  mode: CONFIG.DEFAULT_MODE,
+  targetLang: "en",
+  mode: "simple",
 };
 
 chrome.runtime.onInstalled.addListener(() => {

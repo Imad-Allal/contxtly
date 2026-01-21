@@ -6,7 +6,8 @@ import {
   removeTooltip,
   isOwnElement,
 } from "./ui.js";
-import { CONFIG } from "../config.js";
+
+const MAX_TEXT_LENGTH = 500;
 
 document.addEventListener("mouseup", (e) => {
   if (isOwnElement(e.target)) return;
@@ -17,7 +18,7 @@ document.addEventListener("mouseup", (e) => {
   removeButton();
   removeTooltip();
 
-  if (text.length > 0 && text.length < CONFIG.MAX_TEXT_LENGTH) {
+  if (text.length > 0 && text.length < MAX_TEXT_LENGTH) {
     showButton(e.pageX, e.pageY, () => translate(text, e.pageX, e.pageY));
   }
 });

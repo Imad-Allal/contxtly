@@ -4,22 +4,31 @@ from config import settings
 
 client = Groq(api_key=settings.groq_api_key)
 
-SIMPLE_PROMPT = """Translate the following text from {source_lang} to {target_lang}.
-Return ONLY the translation, nothing else.
+SIMPLE_PROMPT = """Translate to {target_lang}. Return ONLY the translation.
 
-Text: {text}"""
+{text}"""
 
 SMART_PROMPT = """Translate "{text}" from {source_lang} to {target_lang}.
 Context: "{context}"
 
-Respond in this exact format, nothing else:
+Rules:
+- Example: write in {source_lang}
+- Meaning: write in {target_lang}
+- Breakdown: ONLY include if the word has multiple meaningful parts:
+  - Compound words: "Falschbehauptungen" → "Falsch (false) + Behauptungen (claims)"
+  - Conjugated verbs: "wärmte" → "wärm- (to warm) + -te (past tense)"
+  - Plurals/cases: "Häuser" → "Haus (house) + -er (plural)"
+  - If the word is simple (like "Rede", "Haus", "gut"), DO NOT include Breakdown line at all
 
-**Translation**: [translation]
-**Meaning**: [one sentence max]
-**Examples**:
-- [example 1 in {target_lang}]
-- [example 2 in {target_lang}]
-**Grammar**: [one sentence max, only if relevant]"""
+Format (follow exactly):
+
+**Translation**: [translation in {target_lang}]
+**Meaning**: [one short sentence in {target_lang} explaining the meaning]
+**Breakdown**: [part1 (meaning) + part2 (meaning) in {target_lang}] OR omit this line entirely
+**Example**:
+- [example in {source_lang}]
+- [translation in {target_lang}]
+"""
 
 
 def translate_simple(
