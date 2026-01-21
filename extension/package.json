@@ -1,0 +1,13 @@
+{
+  "name": "contxtly-extension",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "7.3.1"
+  }
+}

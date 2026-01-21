@@ -2,14 +2,21 @@
   "manifest_version": 3,
   "name": "Contxtly",
   "version": "1.0.0",
-  "description": "Contextual translator for any webpage",
+  "description": "Contextual translator",
   "permissions": ["storage"],
   "host_permissions": ["http://localhost:8000/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Contxtly Settings"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"]
+      "js": ["content/content.js"],
+      "css": ["styles/content.css"]
     }
   ]
 }
