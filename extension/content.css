@@ -1,0 +1,38 @@
+.contxtly-btn {
+  position: absolute;
+  z-index: 999999;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.contxtly-btn:hover {
+  background: #4338ca;
+}
+
+.contxtly-tooltip {
+  position: absolute;
+  z-index: 999999;
+  background: white;
+  color: #000;
+  border-radius: 8px;
+  padding: 12px;
+  max-width: 320px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.contxtly-tooltip-loading {
+  color: #141414;
+}
+
+.contxtly-tooltip-error {
+  color: #dc2626;
+}
