@@ -6,9 +6,43 @@ import {
   removeTooltip,
   isOwnElement,
 } from "./ui.js";
+import { highlightSelection, getCachedTranslation } from "./highlight.js";
 
 const MAX_TEXT_LENGTH = 500;
 const SENTENCE_ENDINGS = /[.!?]/;
+
+// Trim selection to only include letters/numbers
+function trimSelectionRange(selection) {
+  if (!selection.rangeCount) return null;
+
+  const range = selection.getRangeAt(0).cloneRange();
+  const text = selection.toString();
+
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (/\p{L}|\p{N}/u.test(text[i])) {
+      start = i;
+      break;
+    }
+  }
+
+  let end = text.length;
+  for (let i = text.length - 1; i >= 0; i--) {
+    if (/\p{L}|\p{N}/u.test(text[i])) {
+      end = i + 1;
+      break;
+    }
+  }
+
+  if (start > 0) {
+    range.setStart(range.startContainer, range.startOffset + start);
+  }
+  if (end < text.length) {
+    range.setEnd(range.endContainer, range.endOffset - (text.length - end));
+  }
+
+  return range;
+}
 
 document.addEventListener("mouseup", (e) => {
   if (isOwnElement(e.target)) return;
@@ -21,8 +55,8 @@ document.addEventListener("mouseup", (e) => {
 
   if (text.length > 0 && text.length < MAX_TEXT_LENGTH) {
     const context = extractSentence(selection);
-    console.log("Extracted context:", context);
-    showButton(e.pageX, e.pageY, () => translate(text, context, e.pageX, e.pageY));
+    const range = trimSelectionRange(selection);
+    showButton(e.pageX, e.pageY, () => translate(text, context, range, e.pageX, e.pageY));
   }
 });
 
@@ -121,10 +155,16 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-async function translate(text, context, x, y) {
+async function translate(text, context, range, x, y) {
   showTooltip(x, y);
 
   try {
+    const cached = await getCachedTranslation(text);
+    if (cached) {
+      updateTooltip(cached);
+      return;
+    }
+
     const response = await chrome.runtime.sendMessage({
       action: "translate",
       data: { text, context },
@@ -134,6 +174,7 @@ async function translate(text, context, x, y) {
       updateTooltip(response.error, true);
     } else {
       updateTooltip(response.translation);
+      highlightSelection(range, text, response.translation);
     }
   } catch (err) {
     updateTooltip("Translation failed", true);

@@ -77,3 +77,17 @@
   color: #6b7280;
   margin-top: 2px;
 }
+
+/* Highlight for translated words */
+.contxtly-highlight {
+  background: #fef08a;
+  border-radius: 3px;
+  padding: 1px 3px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  box-decoration-break: clone;
+}
+
+.contxtly-highlight:hover {
+  background: #fde047;
+}
