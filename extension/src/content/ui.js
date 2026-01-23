@@ -1,120 +1,18 @@
 let button = null;
 let tooltip = null;
 
-export function showButton(x, y, onClick) {
-  removeButton();
+const ICONS = {
+  delete: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+  </svg>`,
+};
 
-  button = document.createElement("button");
-  button.className = "contxtly-btn";
-  button.textContent = "Translate";
-
-  const pos = clampPosition(x, y + 10, 100, 36);
-  button.style.left = `${pos.x}px`;
-  button.style.top = `${pos.y}px`;
-
-  button.addEventListener("click", (e) => {
-    e.stopPropagation();
-    onClick();
-    removeButton();
-  });
-
-  document.body.appendChild(button);
-}
-
-export function removeButton() {
-  if (button) {
-    button.remove();
-    button = null;
-  }
-}
-
-export function showTooltip(x, y) {
-  removeTooltip();
-
-  tooltip = document.createElement("div");
-  tooltip.className = "contxtly-tooltip contxtly-tooltip-loading";
-  tooltip.textContent = "Translating...";
-
-  const pos = clampPosition(x, y + 10, 320, 100);
-  tooltip.style.left = `${pos.x}px`;
-  tooltip.style.top = `${pos.y}px`;
-
-  document.body.appendChild(tooltip);
-  return tooltip;
-}
-
-export function updateTooltip(content, isError = false) {
-  if (!tooltip) return;
-
-  tooltip.className = isError
-    ? "contxtly-tooltip contxtly-tooltip-error"
-    : "contxtly-tooltip";
-
-  if (isError) {
-    tooltip.textContent = content;
-    return;
-  }
-
-  tooltip.innerHTML = formatTranslation(content);
-}
-
-function formatTranslation(text) {
-  const sections = {
-    Translation: "",
-    Meaning: "",
-    Breakdown: "",
-    Example: "",
+// Helpers
+function clamp(x, y, w, h) {
+  return {
+    x: Math.max(10, Math.min(x, window.innerWidth - w - 10)),
+    y: Math.max(10, Math.min(y, window.innerHeight - h - 10)),
   };
-
-  let currentSection = null;
-  const lines = text.split("\n");
-
-  for (const line of lines) {
-    const match = line.match(/^\*\*(\w+)\*\*:\s*(.*)$/);
-    if (match) {
-      currentSection = match[1];
-      if (sections.hasOwnProperty(currentSection)) {
-        sections[currentSection] = match[2];
-      }
-    } else if (currentSection === "Example" && line.trim().startsWith("-")) {
-      sections.Example += line.trim() + "\n";
-    } else if (currentSection && line.trim()) {
-      sections[currentSection] += " " + line.trim();
-    }
-  }
-
-  let html = "";
-
-  if (sections.Translation) {
-    html += `<div class="contxtly-section contxtly-translation">${escapeHtml(sections.Translation.trim())}</div>`;
-  }
-
-  if (sections.Meaning) {
-    html += `<div class="contxtly-section contxtly-meaning">${escapeHtml(sections.Meaning.trim())}</div>`;
-  }
-
-  if (sections.Breakdown && isValidBreakdown(sections.Breakdown.trim())) {
-    html += `<div class="contxtly-section contxtly-breakdown">${escapeHtml(sections.Breakdown.trim())}</div>`;
-  }
-
-  if (sections.Example) {
-    const exampleLines = sections.Example.trim()
-      .split("\n")
-      .filter((line) => line.trim())
-      .map((line) => escapeHtml(line.replace(/^-\s*/, "")));
-
-    if (exampleLines.length >= 2) {
-      // First line is source, second is translation
-      html += `<div class="contxtly-section contxtly-example">
-        <div class="contxtly-example-source">${exampleLines[0]}</div>
-        <div class="contxtly-example-translation">${exampleLines[1]}</div>
-      </div>`;
-    } else if (exampleLines.length === 1) {
-      html += `<div class="contxtly-section contxtly-example">${exampleLines[0]}</div>`;
-    }
-  }
-
-  return html || escapeHtml(text);
 }
 
 function escapeHtml(text) {
@@ -123,29 +21,124 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-function isValidBreakdown(text) {
-  // Must contain actual breakdown pattern: "word (meaning) + word (meaning)"
-  // or "word (meaning) = translation"
-  return /\(.+\)\s*[+=]/.test(text) || /[+=]\s*\(.+\)/.test(text);
+function parseTranslation(text) {
+  const sections = { Translation: "", Meaning: "", Breakdown: "", Example: "" };
+  let current = null;
+
+  for (const line of text.split("\n")) {
+    const match = line.match(/^\*\*(\w+)\*\*:\s*(.*)$/);
+    if (match && sections.hasOwnProperty(match[1])) {
+      current = match[1];
+      sections[current] = match[2];
+    } else if (current === "Example" && line.trim().startsWith("-")) {
+      sections.Example += line.trim() + "\n";
+    } else if (current && line.trim()) {
+      sections[current] += " " + line.trim();
+    }
+  }
+
+  return sections;
+}
+
+function formatTranslation(text) {
+  const s = parseTranslation(text);
+  let html = "";
+
+  if (s.Translation) {
+    html += `<div class="contxtly-section contxtly-translation">${escapeHtml(s.Translation.trim())}</div>`;
+  }
+  if (s.Meaning) {
+    html += `<div class="contxtly-section contxtly-meaning">${escapeHtml(s.Meaning.trim())}</div>`;
+  }
+  if (s.Breakdown && /\(.+\)\s*[+=]|[+=]\s*\(.+\)/.test(s.Breakdown)) {
+    html += `<div class="contxtly-section contxtly-breakdown">${escapeHtml(s.Breakdown.trim())}</div>`;
+  }
+  if (s.Example) {
+    const lines = s.Example.trim().split("\n").filter(Boolean).map((l) => escapeHtml(l.replace(/^-\s*/, "")));
+    if (lines.length >= 2) {
+      html += `<div class="contxtly-section contxtly-example">
+        <div class="contxtly-example-source">${lines[0]}</div>
+        <div class="contxtly-example-translation">${lines[1]}</div>
+      </div>`;
+    } else if (lines.length) {
+      html += `<div class="contxtly-section contxtly-example">${lines[0]}</div>`;
+    }
+  }
+
+  return html || escapeHtml(text);
+}
+
+function setPosition(el, x, y, w, h) {
+  const pos = clamp(x, y + 10, w, h);
+  el.style.left = `${pos.x}px`;
+  el.style.top = `${pos.y}px`;
+}
+
+// Button
+export function showButton(x, y, onClick) {
+  removeButton();
+  button = document.createElement("button");
+  button.className = "contxtly-btn";
+  button.textContent = "Translate";
+  setPosition(button, x, y, 100, 36);
+
+  button.onclick = (e) => {
+    e.stopPropagation();
+    onClick();
+    removeButton();
+  };
+
+  document.body.appendChild(button);
+}
+
+export function removeButton() {
+  button?.remove();
+  button = null;
+}
+
+// Tooltip
+export function showTooltip(x, y) {
+  removeTooltip();
+  tooltip = document.createElement("div");
+  tooltip.className = "contxtly-tooltip contxtly-tooltip-loading";
+  tooltip.textContent = "Translating...";
+  setPosition(tooltip, x, y, 320, 100);
+  document.body.appendChild(tooltip);
+}
+
+export function updateTooltip(content, isError = false) {
+  if (!tooltip) return;
+  tooltip.className = `contxtly-tooltip${isError ? " contxtly-tooltip-error" : ""}`;
+  tooltip.innerHTML = isError ? escapeHtml(content) : formatTranslation(content);
 }
 
 export function removeTooltip() {
-  if (tooltip) {
-    tooltip.remove();
-    tooltip = null;
+  tooltip?.remove();
+  tooltip = null;
+}
+
+export function showTranslationTooltip(x, y, content, onDelete) {
+  removeTooltip();
+  tooltip = document.createElement("div");
+  tooltip.className = "contxtly-tooltip";
+  tooltip.innerHTML = formatTranslation(content);
+
+  if (onDelete) {
+    const btn = document.createElement("button");
+    btn.className = "contxtly-tooltip-delete";
+    btn.innerHTML = ICONS.delete;
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      onDelete();
+      removeTooltip();
+    };
+    tooltip.appendChild(btn);
   }
+
+  setPosition(tooltip, x, y, 320, 100);
+  document.body.appendChild(tooltip);
 }
 
 export function isOwnElement(el) {
-  return (button && button.contains(el)) || (tooltip && tooltip.contains(el));
-}
-
-function clampPosition(x, y, width, height) {
-  const maxX = window.innerWidth - width - 10;
-  const maxY = window.innerHeight - height - 10;
-
-  return {
-    x: Math.max(10, Math.min(x, maxX)),
-    y: Math.max(10, Math.min(y, maxY)),
-  };
+  return button?.contains(el) || tooltip?.contains(el) || el.classList?.contains("contxtly-highlight");
 }

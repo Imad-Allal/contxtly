@@ -1,33 +1,39 @@
-const HIGHLIGHT_CLASS = "contxtly-highlight";
-const SKIP_SELECTOR = `.${HIGHLIGHT_CLASS}, .contxtly-btn, .contxtly-tooltip`;
+import { showTranslationTooltip, removeTooltip } from "./ui.js";
 
-const getPageUrl = () => {
-  const u = new URL(window.location.href);
-  return u.origin + u.pathname;
-};
+const CLASS = "contxtly-highlight";
+const SKIP = `.${CLASS}, .contxtly-btn, .contxtly-tooltip`;
+
+const getUrl = () => new URL(location.href).origin + new URL(location.href).pathname;
 
 // Storage
-async function getPageHighlights() {
+async function getHighlights() {
   const { highlights = {} } = await chrome.storage.local.get("highlights");
-  return highlights[getPageUrl()] || [];
+  return highlights[getUrl()] || [];
 }
 
-async function saveToStorage(text, translation, context) {
-  const url = getPageUrl();
+async function saveHighlight(text, translation, context) {
+  const url = getUrl();
   const { highlights = {} } = await chrome.storage.local.get("highlights");
-
   if (!highlights[url]) highlights[url] = [];
   highlights[url].push({ text, translation, context });
   await chrome.storage.local.set({ highlights });
 }
 
-// Check cache
+async function removeFromStorage(text) {
+  const url = getUrl();
+  const { highlights = {} } = await chrome.storage.local.get("highlights");
+  if (!highlights[url]) return;
+  highlights[url] = highlights[url].filter((h) => h.text !== text);
+  if (!highlights[url].length) delete highlights[url];
+  await chrome.storage.local.set({ highlights });
+}
+
 export async function getCachedTranslation(text) {
-  const found = (await getPageHighlights()).find((h) => h.text === text);
+  const found = (await getHighlights()).find((h) => h.text === text);
   return found?.translation || null;
 }
 
-// Unwrap a mark element, keeping its children
+// DOM helpers
 function unwrap(el) {
   const parent = el.parentNode;
   while (el.firstChild) parent.insertBefore(el.firstChild, el);
@@ -35,85 +41,79 @@ function unwrap(el) {
   parent.normalize();
 }
 
-// Create mark element
-function createMark(translation) {
+function createMark(translation, text) {
   const mark = document.createElement("mark");
-  mark.className = HIGHLIGHT_CLASS;
+  mark.className = CLASS;
   mark.dataset.translation = translation;
+
+  mark.onclick = (e) => {
+    e.stopPropagation();
+    const rect = mark.getBoundingClientRect();
+    showTranslationTooltip(rect.left, rect.bottom, translation, async () => {
+      await removeFromStorage(text || mark.textContent);
+      unwrap(mark);
+    });
+  };
+
   return mark;
 }
 
-// Get surrounding context to uniquely identify a text occurrence
 function getContext(range, text) {
-  const container = range.commonAncestorContainer;
-  const block = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
-  const parent = block?.closest("p, div, li, td, article, section") || block;
-  const fullText = parent?.textContent || "";
-  const idx = fullText.indexOf(text);
+  const el = range.commonAncestorContainer;
+  const block = (el.nodeType === Node.TEXT_NODE ? el.parentElement : el)?.closest("p, div, li, td, article, section");
+  const full = block?.textContent || "";
+  const idx = full.indexOf(text);
   if (idx === -1) return "";
-  // Get ~30 chars before and after
-  const start = Math.max(0, idx - 30);
-  const end = Math.min(fullText.length, idx + text.length + 30);
-  return fullText.slice(start, end);
+  return full.slice(Math.max(0, idx - 30), Math.min(full.length, idx + text.length + 30));
 }
 
-// Highlight the selected range
+// Highlight selection
 export async function highlightSelection(range, text, translation) {
   if (!range) return;
 
-  // Skip if selection is inside an existing highlight with same text
   const container = range.commonAncestorContainer;
-  const parentEl = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
-  const existingMark = parentEl?.closest?.(`.${HIGHLIGHT_CLASS}`);
-  if (existingMark && existingMark.textContent === text) {
-    return;
-  }
+  const parent = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
+  const existing = parent?.closest?.(`.${CLASS}`);
 
-  // If selection overlaps existing highlights, unwrap them first
-  if (existingMark || parentEl?.querySelector?.(`.${HIGHLIGHT_CLASS}`)) {
-    const root = parentEl?.closest("p, div, li, td, article, section") || document.body;
-    const marks = [...root.querySelectorAll(`.${HIGHLIGHT_CLASS}`)];
+  if (existing?.textContent === text) return;
 
-    for (const mark of marks) {
+  // Unwrap overlapping highlights
+  if (existing || parent?.querySelector?.(`.${CLASS}`)) {
+    const root = parent?.closest("p, div, li, td, article, section") || document.body;
+    for (const mark of root.querySelectorAll(`.${CLASS}`)) {
       try {
-        const markRange = document.createRange();
-        markRange.selectNode(mark);
-        const overlaps =
-          range.compareBoundaryPoints(Range.END_TO_START, markRange) <= 0 &&
-          range.compareBoundaryPoints(Range.START_TO_END, markRange) >= 0;
-        if (overlaps) unwrap(mark);
+        const r = document.createRange();
+        r.selectNode(mark);
+        if (range.compareBoundaryPoints(Range.END_TO_START, r) <= 0 &&
+            range.compareBoundaryPoints(Range.START_TO_END, r) >= 0) {
+          unwrap(mark);
+        }
       } catch {}
     }
   }
 
-  // Get context before wrapping (DOM will change after)
   const context = getContext(range, text);
 
-  // Now wrap the selection
   try {
-    const mark = createMark(translation);
-    range.surroundContents(mark);
+    range.surroundContents(createMark(translation, text));
   } catch {
-    // Cross-element selection - extract, flatten, wrap
     try {
       const contents = range.extractContents();
-      contents.querySelectorAll?.(`.${HIGHLIGHT_CLASS}`).forEach(unwrap);
-      const mark = createMark(translation);
+      contents.querySelectorAll?.(`.${CLASS}`).forEach(unwrap);
+      const mark = createMark(translation, text);
       mark.appendChild(contents);
       range.insertNode(mark);
     } catch {}
   }
 
-  await saveToStorage(text, translation, context);
+  await saveHighlight(text, translation, context);
 }
 
-// Find and highlight specific occurrence using context
-function highlightText(text, translation, context) {
+// Restore on page load
+function restoreHighlight(text, translation, context) {
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-    acceptNode: (node) => {
-      if (node.parentElement.closest(SKIP_SELECTOR)) return NodeFilter.FILTER_REJECT;
-      return node.textContent.includes(text) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-    },
+    acceptNode: (n) => n.parentElement.closest(SKIP) ? NodeFilter.FILTER_REJECT :
+                       n.textContent.includes(text) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT,
   });
 
   while (walker.nextNode()) {
@@ -121,30 +121,37 @@ function highlightText(text, translation, context) {
     const idx = node.textContent.indexOf(text);
     if (idx === -1) continue;
 
-    // Check if this occurrence matches the stored context
-    const block = node.parentElement?.closest("p, div, li, td, article, section") || node.parentElement;
-    const blockText = block?.textContent || "";
-
-    // If context provided, only highlight if context matches
-    if (context && !blockText.includes(context.slice(10, -10))) continue;
-
-    const range = document.createRange();
-    range.setStart(node, idx);
-    range.setEnd(node, idx + text.length);
+    const block = node.parentElement?.closest("p, div, li, td, article, section");
+    if (context && !block?.textContent?.includes(context.slice(10, -10))) continue;
 
     try {
-      range.surroundContents(createMark(translation));
-      return; // Only highlight first matching occurrence
+      const range = document.createRange();
+      range.setStart(node, idx);
+      range.setEnd(node, idx + text.length);
+      range.surroundContents(createMark(translation, text));
+      return;
     } catch {}
   }
 }
 
-// Restore highlights on page load
-async function restoreHighlights() {
-  const highlights = await getPageHighlights();
-  for (const { text, translation, context } of highlights) {
-    highlightText(text, translation, context || "");
+async function restore() {
+  for (const { text, translation, context } of await getHighlights()) {
+    restoreHighlight(text, translation, context || "");
   }
 }
 
-restoreHighlights();
+// Message listener
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.action === "removeHighlight") {
+    document.querySelectorAll(`.${CLASS}`).forEach((m) => m.textContent === msg.text && unwrap(m));
+  }
+});
+
+// Close tooltip on outside click
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(`.${CLASS}`) && !e.target.closest(".contxtly-tooltip")) {
+    removeTooltip();
+  }
+});
+
+restore();
