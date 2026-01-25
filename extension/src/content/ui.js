@@ -37,10 +37,10 @@ function formatTranslation(data) {
     if (data.breakdown) {
       html += `<div class="contxtly-section contxtly-breakdown">${escapeHtml(data.breakdown)}</div>`;
     }
-    if (data.example?.source) {
-      html += `<div class="contxtly-section contxtly-example">
-        <div class="contxtly-example-source">${escapeHtml(data.example.source)}</div>
-        <div class="contxtly-example-translation">${escapeHtml(data.example.target)}</div>
+    if (data.context_translation?.source) {
+      html += `<div class="contxtly-section contxtly-context-translation">
+        <div class="contxtly-context-translation-source">${escapeHtml(data.context_translation.source)}</div>
+        <div class="contxtly-context-translation-target">${escapeHtml(data.context_translation.target)}</div>
       </div>`;
     }
 

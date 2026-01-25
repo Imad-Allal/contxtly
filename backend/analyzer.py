@@ -83,6 +83,12 @@ def classify_word_type(token, lang: str, has_compound_tense: bool = False) -> st
         if morph.get("Number") == "Plur":
             return "plural_noun"
 
+    # Adjectives - check for compound adjectives
+    if pos == "ADJ":
+        lang_module = get_language(lang)
+        if lang_module:
+            return lang_module.classify_adjective(token, morph)
+
     return "simple"
 
 
