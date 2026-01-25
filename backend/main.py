@@ -1,8 +1,20 @@
-from fastapi import FastAPI
+import logging
+import traceback
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from translator import translate_simple, translate_smart
+from pipeline import translate_pipeline
+
+log = logging.getLogger(__name__)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 app = FastAPI()
 
@@ -24,11 +36,19 @@ class TranslateRequest(BaseModel):
 
 @app.post("/translate")
 def translate(req: TranslateRequest):
-    if req.mode == "smart":
-        result = translate_smart(req.text, req.context or "", req.source_lang, req.target_lang)
-    else:
-        result = translate_simple(req.text, req.source_lang, req.target_lang)
-    return {"translation": result, "mode": req.mode}
+    try:
+        result = translate_pipeline(
+            text=req.text,
+            context=req.context or "",
+            source_lang=req.source_lang,
+            target_lang=req.target_lang,
+            mode=req.mode,
+        )
+        return result.to_dict()
+    except Exception as e:
+        log.error(f"[ERROR] Translation failed: {e}")
+        log.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/health")

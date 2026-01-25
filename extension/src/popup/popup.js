@@ -47,9 +47,15 @@ async function loadWords() {
 function getFiltered() {
   const q = els.search.value.toLowerCase().trim();
   if (!q) return words;
-  return words.filter((w) =>
-    w.text.toLowerCase().includes(q) || w.translation.toLowerCase().includes(q)
-  );
+  return words.filter((w) => {
+    if (w.text.toLowerCase().includes(q)) return true;
+    const t = w.translation;
+    if (typeof t === "object") {
+      return (t.translation || "").toLowerCase().includes(q) ||
+             (t.meaning || "").toLowerCase().includes(q);
+    }
+    return false;
+  });
 }
 
 function render() {
@@ -153,13 +159,22 @@ function toggleSelectAll() {
 }
 
 // Helpers
-const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function formatTranslation(text) {
-  return esc(text)
-    .replace(/\*\*([^*]+)\*\*:/g, '<span class="label">$1:</span>')
-    .replace(/\n- /g, "\n• ")
-    .replace(/\n/g, "<br>");
+function formatTranslation(data) {
+  // Handle JSON object
+  if (typeof data === "object" && data !== null) {
+    let html = "";
+    if (data.translation) html += `<span class="label">Translation:</span> ${esc(data.translation)}<br>`;
+    if (data.meaning) html += `<span class="label">Meaning:</span> ${esc(data.meaning)}<br>`;
+    if (data.breakdown) html += `<span class="label">Breakdown:</span> ${esc(data.breakdown)}<br>`;
+    if (data.example?.source) {
+      html += `<span class="label">Example:</span><br>• ${esc(data.example.source)}<br>• ${esc(data.example.target)}`;
+    }
+    return html || esc(JSON.stringify(data));
+  }
+
+  return "";
 }
 
 // Events

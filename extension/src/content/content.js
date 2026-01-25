@@ -93,8 +93,8 @@ async function translate(text, context, range, x, y) {
     if (res.error) {
       updateTooltip(res.error, true);
     } else {
-      updateTooltip(res.translation);
-      highlightSelection(range, text, res.translation);
+      updateTooltip(res);
+      highlightSelection(range, text, res);
     }
   } catch {
     updateTooltip("Translation failed", true);

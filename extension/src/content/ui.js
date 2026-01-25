@@ -21,51 +21,33 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-function parseTranslation(text) {
-  const sections = { Translation: "", Meaning: "", Breakdown: "", Example: "" };
-  let current = null;
+function formatTranslation(data) {
+  // Handle JSON object
+  console.log("formatTranslation data:", data);
+  if (typeof data === "object" && data !== null) {
+    console.log("formatTranslation object data:", data);
+    let html = "";
 
-  for (const line of text.split("\n")) {
-    const match = line.match(/^\*\*(\w+)\*\*:\s*(.*)$/);
-    if (match && sections.hasOwnProperty(match[1])) {
-      current = match[1];
-      sections[current] = match[2];
-    } else if (current === "Example" && line.trim().startsWith("-")) {
-      sections.Example += line.trim() + "\n";
-    } else if (current && line.trim()) {
-      sections[current] += " " + line.trim();
+    if (data.translation) {
+      html += `<div class="contxtly-section contxtly-translation">${escapeHtml(data.translation)}</div>`;
     }
-  }
-
-  return sections;
-}
-
-function formatTranslation(text) {
-  const s = parseTranslation(text);
-  let html = "";
-
-  if (s.Translation) {
-    html += `<div class="contxtly-section contxtly-translation">${escapeHtml(s.Translation.trim())}</div>`;
-  }
-  if (s.Meaning) {
-    html += `<div class="contxtly-section contxtly-meaning">${escapeHtml(s.Meaning.trim())}</div>`;
-  }
-  if (s.Breakdown && /\(.+\)\s*[+=]|[+=]\s*\(.+\)/.test(s.Breakdown)) {
-    html += `<div class="contxtly-section contxtly-breakdown">${escapeHtml(s.Breakdown.trim())}</div>`;
-  }
-  if (s.Example) {
-    const lines = s.Example.trim().split("\n").filter(Boolean).map((l) => escapeHtml(l.replace(/^-\s*/, "")));
-    if (lines.length >= 2) {
+    if (data.meaning) {
+      html += `<div class="contxtly-section contxtly-meaning">${escapeHtml(data.meaning)}</div>`;
+    }
+    if (data.breakdown) {
+      html += `<div class="contxtly-section contxtly-breakdown">${escapeHtml(data.breakdown)}</div>`;
+    }
+    if (data.example?.source) {
       html += `<div class="contxtly-section contxtly-example">
-        <div class="contxtly-example-source">${lines[0]}</div>
-        <div class="contxtly-example-translation">${lines[1]}</div>
+        <div class="contxtly-example-source">${escapeHtml(data.example.source)}</div>
+        <div class="contxtly-example-translation">${escapeHtml(data.example.target)}</div>
       </div>`;
-    } else if (lines.length) {
-      html += `<div class="contxtly-section contxtly-example">${lines[0]}</div>`;
     }
+
+    return html || escapeHtml(JSON.stringify(data));
   }
 
-  return html || escapeHtml(text);
+  return "";
 }
 
 function setPosition(el, x, y, w, h) {

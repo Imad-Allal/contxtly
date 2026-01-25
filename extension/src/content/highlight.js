@@ -44,12 +44,16 @@ function unwrap(el) {
 function createMark(translation, text) {
   const mark = document.createElement("mark");
   mark.className = CLASS;
-  mark.dataset.translation = translation;
+  // Store as JSON string for dataset
+  mark.dataset.translation = typeof translation === "object" ? JSON.stringify(translation) : translation;
 
   mark.onclick = (e) => {
     e.stopPropagation();
     const rect = mark.getBoundingClientRect();
-    showTranslationTooltip(rect.left, rect.bottom, translation, async () => {
+    // Parse back if needed
+    let data = mark.dataset.translation;
+    try { data = JSON.parse(data); } catch {}
+    showTranslationTooltip(rect.left, rect.bottom, data, async () => {
       await removeFromStorage(text || mark.textContent);
       unwrap(mark);
     });
