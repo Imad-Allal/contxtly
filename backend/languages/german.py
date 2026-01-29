@@ -4,15 +4,6 @@ import spacy
 from languages.base import LanguageConfig, LanguageModule
 
 
-# German separable verb prefixes (trennbare Verben)
-# These prefixes detach from the verb stem and move to the end of the clause
-SEPARABLE_PREFIXES = frozenset({
-    "ab", "an", "auf", "aus", "bei", "ein", "fest", "her", "hin", "los",
-    "mit", "nach", "vor", "weg", "zu", "zurück", "zusammen", "weiter",
-    "da", "dar", "empor", "fort", "heim", "nieder", "um", "vorbei",
-})
-
-
 def detect_separable_verb(word: str, doc: spacy.tokens.Doc) -> str | None:
     """
     Detect if a verb is part of a separable verb construction.
@@ -38,17 +29,11 @@ def detect_separable_verb(word: str, doc: spacy.tokens.Doc) -> str | None:
 
     lemma = target_token.lemma_
 
-    # Find separable prefix: spaCy tags it as PTKVZ (separable verb particle)
-    # and links it to the verb via dependency parsing (svp = separable verb prefix)
     for token in doc:
-        # Method 1: Check if this token is a separable verb prefix (PTKVZ)
+        # Check if this token is a separable verb prefix (PTKVZ tag or svp dependency)
         # and its head is our verb
-        if token.tag_ == "PTKVZ" and token.head == target_token:
-            return token.text.lower() + lemma
-
-        # Method 2: Check dependency relation (svp = separable verb prefix)
-        if token.dep_ == "svp" and token.head == target_token:
-            if token.text.lower() in SEPARABLE_PREFIXES:
+        if token.head == target_token:
+            if token.tag_ == "PTKVZ" or token.dep_ == "svp":
                 return token.text.lower() + lemma
 
     return None
