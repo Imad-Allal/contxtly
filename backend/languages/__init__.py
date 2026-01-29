@@ -11,11 +11,11 @@ from languages.dutch import Dutch
 _LANGUAGES: dict[str, LanguageModule] = {
     "de": German(),
     "fr": French(),
-    "es": Spanish(),
     "en": English(),
-    "it": Italian(),
-    "pt": Portuguese(),
-    "nl": Dutch(),
+    # "es": Spanish(),
+    # "it": Italian(),
+    # "pt": Portuguese(),
+    # "nl": Dutch(),
 }
 
 

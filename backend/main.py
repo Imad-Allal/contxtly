@@ -1,13 +1,13 @@
 import logging
 import traceback
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from analyzer import preload_models
 from pipeline import translate_pipeline
-
-log = logging.getLogger(__name__)
 
 # Configure logging
 logging.basicConfig(
@@ -16,7 +16,17 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 
-app = FastAPI()
+log = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Preload models on startup."""
+    preload_models()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

@@ -8,6 +8,13 @@ from translator import translate_smart, translate_simple
 from languages import get_language
 from timing import start_timing_context, record_timing, log_timing_summary, TimingBlock
 
+# Pre-import compound_split to avoid lazy loading on first request
+try:
+    from compound_split import char_split
+    _char_split_available = True
+except ImportError:
+    _char_split_available = False
+
 log = logging.getLogger(__name__)
 
 
@@ -31,12 +38,14 @@ class TranslationResult:
 
 def try_split_compound(word: str, lang: str) -> list[str] | None:
     """Try to split a compound word using language-specific rules."""
+    if not _char_split_available:
+        return None
+
     lang_module = get_language(lang)
     if not lang_module or not lang_module.should_split_compound(word):
         return None
 
     try:
-        from compound_split import char_split
         # char_split.split_compound returns list of tuples (score, part1, part2, ...)
         results = char_split.split_compound(word)
         if results and len(results) > 0:
@@ -57,7 +66,7 @@ def try_split_compound(word: str, lang: str) -> list[str] | None:
                     # Clean linking elements from first part
                     parts[0] = lang_module.clean_compound_part(parts[0])
                     return parts
-    except (ImportError, Exception) as e:
+    except Exception as e:
         log.warning(f"[COMPOUND] Split failed: {e}")
 
     return None
