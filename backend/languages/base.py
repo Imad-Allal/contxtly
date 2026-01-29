@@ -94,8 +94,6 @@ class LanguageConfig:
     compound_prefixes: set[str] = field(default_factory=set)
     compound_linking_patterns: list[tuple[str, str]] = field(default_factory=list)
 
-    # LLM prompt additions for this language (e.g., separable verb handling)
-    translation_prompt_addition: str = ""
 
 
 class LanguageModule(ABC):

@@ -141,6 +141,11 @@ def translate_pipeline(
     log.info(f"         - POS: {analysis.pos}")
     log.info(f"         - Morph: {analysis.morph}")
     log.info(f"         - Word type: {analysis.word_type}")
+    if analysis.separable_verb:
+        log.info(f"         - Separable verb: {analysis.separable_verb}")
+
+    # Use separable verb if detected (e.g., "ziehe" → "anziehen")
+    word_to_translate = analysis.separable_verb or text
 
     # Try char_split first (free, local) for compound words
     is_compound = analysis.word_type in ("compound_noun", "compound_adjective")
@@ -154,13 +159,15 @@ def translate_pipeline(
             log.info("[STEP 1.5] char_split failed, LLM will handle splitting")
 
     # Step 2: Smart translate (translation + meaning + base + example + compound in one call)
-    log.info("[STEP 2] Smart translating with LLM (combined call)...")
-    lemma_to_translate = analysis.lemma if analysis.lemma != text else None
+    log.info(f"[STEP 2] Smart translating with LLM: '{word_to_translate}'...")
+    # For separable verbs, we already have the infinitive - no need to translate lemma separately
+    # For regular verbs, translate lemma if different from conjugated form
+    lemma_to_translate = None if analysis.separable_verb else (analysis.lemma if analysis.lemma != text else None)
     # Only ask LLM to split if char_split failed
     need_llm_compound_split = is_compound and not char_split_parts
     with TimingBlock("Step 2: translate_smart"):
         smart_result = translate_smart(
-            text, detected_lang, target_lang, context, lemma_to_translate,
+            word_to_translate, detected_lang, target_lang, context, lemma_to_translate,
             is_compound=need_llm_compound_split,
             compound_parts_to_translate=char_split_parts,
             skip_context_translation=cached_context_translation is not None,

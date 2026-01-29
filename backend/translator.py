@@ -4,7 +4,6 @@ import time
 from groq import Groq
 
 from config import settings
-from languages import get_language
 from timing import record_timing
 
 log = logging.getLogger(__name__)
@@ -82,9 +81,6 @@ def translate_smart(
     context_instruction = ""
     if context:
         context_instruction = f'The word appears in this sentence: "{context}"'
-        lang_module = get_language(source_lang)
-        if lang_module and lang_module.config.translation_prompt_addition:
-            context_instruction += lang_module.config.translation_prompt_addition.format(word=word)
 
     lemma_instruction = ""
     if lemma and lemma != word:

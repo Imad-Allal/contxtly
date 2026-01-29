@@ -9,15 +9,25 @@ def generate_verb_breakdown(analysis: WordAnalysis, lemma_translation: str) -> s
     if analysis.word_type != "conjugated_verb":
         return None
 
+    # Use separable verb infinitive if detected, otherwise use lemma
+    infinitive = analysis.separable_verb or analysis.lemma
+
+    # For separable verbs, show the split form: "fängt + an"
+    conjugated = analysis.text
+    if analysis.separable_verb:
+        # Extract prefix from separable verb (e.g., "anfangen" → "an")
+        prefix = analysis.separable_verb.replace(analysis.lemma, "")
+        conjugated = f"{analysis.text} + {prefix}"
+
     # If we detected a compound tense (Perfekt, Futur, etc.), use that
     if analysis.compound_tense:
-        return f"{analysis.lemma} ({lemma_translation}) → {analysis.text} ({analysis.compound_tense})"
+        return f"{infinitive} ({lemma_translation}) → {conjugated} ({analysis.compound_tense})"
 
     # Otherwise, use spaCy's morphology for simple tenses
     morph_desc = describe_morphology(analysis.morph, include=["Tense", "Person", "Number", "Mood"])
 
     if morph_desc:
-        return f"{analysis.lemma} ({lemma_translation}) → {analysis.text} ({morph_desc})"
+        return f"{infinitive} ({lemma_translation}) → {conjugated} ({morph_desc})"
 
     return None
 
