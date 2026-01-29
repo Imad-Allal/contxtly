@@ -4,6 +4,56 @@ import spacy
 from languages.base import LanguageConfig, LanguageModule
 
 
+# German separable verb prefixes (trennbare Verben)
+# These prefixes detach from the verb stem and move to the end of the clause
+SEPARABLE_PREFIXES = frozenset({
+    "ab", "an", "auf", "aus", "bei", "ein", "fest", "her", "hin", "los",
+    "mit", "nach", "vor", "weg", "zu", "zurück", "zusammen", "weiter",
+    "da", "dar", "empor", "fort", "heim", "nieder", "um", "vorbei",
+})
+
+
+def detect_separable_verb(word: str, doc: spacy.tokens.Doc) -> str | None:
+    """
+    Detect if a verb is part of a separable verb construction.
+
+    Example: "Ich ziehe mich an" → "ziehe" is part of "anziehen"
+
+    Args:
+        word: The selected word (e.g., "ziehe")
+        doc: spaCy Doc of the context
+
+    Returns:
+        The full infinitive (e.g., "anziehen") or None if not separable
+    """
+    # Find the token for our word
+    target_token = None
+    for token in doc:
+        if token.text.lower() == word.lower():
+            target_token = token
+            break
+
+    if not target_token or target_token.pos_ != "VERB":
+        return None
+
+    lemma = target_token.lemma_
+
+    # Find separable prefix: spaCy tags it as PTKVZ (separable verb particle)
+    # and links it to the verb via dependency parsing (svp = separable verb prefix)
+    for token in doc:
+        # Method 1: Check if this token is a separable verb prefix (PTKVZ)
+        # and its head is our verb
+        if token.tag_ == "PTKVZ" and token.head == target_token:
+            return token.text.lower() + lemma
+
+        # Method 2: Check dependency relation (svp = separable verb prefix)
+        if token.dep_ == "svp" and token.head == target_token:
+            if token.text.lower() in SEPARABLE_PREFIXES:
+                return token.text.lower() + lemma
+
+    return None
+
+
 # German compound tense patterns
 # (auxiliary_lemma, aux_tense, main_verbform) -> tense_name
 GERMAN_COMPOUND_TENSES = {
@@ -85,11 +135,12 @@ class German(LanguageModule):
                 ("schafts", "schaft"),  # Gesellschafts -> Gesellschaft
                 ("eits", "eit"),      # Arbeits -> Arbeit
             ],
-            # German-specific: separable verbs need special handling
-            translation_prompt_addition='''
-Important for German: Check if "{word}" is part of a separable verb (e.g., "setzten...zusammen" = zusammensetzen, "fing...an" = anfangen). If so, translate the FULL verb, not just the conjugated part.''',
         )
 
     def detect_compound_tense(self, target_word: str, doc: spacy.tokens.Doc) -> str | None:
         """Detect German compound tenses from sentence context."""
         return detect_compound_tense(target_word, doc)
+
+    def detect_separable_verb(self, word: str, doc: spacy.tokens.Doc) -> str | None:
+        """Detect and reconstruct separable verbs from context."""
+        return detect_separable_verb(word, doc)

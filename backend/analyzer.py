@@ -21,6 +21,7 @@ class WordAnalysis:
     lang: str
     word_type: str  # simple, conjugated_verb, compound_noun, plural_noun
     compound_tense: str | None = None  # For compound tenses like Perfekt, Futur I, etc.
+    separable_verb: str | None = None  # Reconstructed infinitive for separable verbs (e.g., "anziehen")
 
 
 def detect_language(text: str) -> str:
@@ -189,6 +190,11 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto") -> Wor
     if lang_module and hasattr(lang_module, "detect_compound_tense") and context:
         compound_tense = lang_module.detect_compound_tense(text, doc)
 
+    # Detect separable verbs (e.g., "ziehe" in "Ich ziehe mich an" → "anziehen")
+    separable_verb = None
+    if lang_module and hasattr(lang_module, "detect_separable_verb") and context:
+        separable_verb = lang_module.detect_separable_verb(text, doc)
+
     # Classify word type (compound tense affects classification)
     word_type = classify_word_type(token, lang, has_compound_tense=bool(compound_tense))
 
@@ -200,4 +206,5 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto") -> Wor
         lang=lang,
         word_type=word_type,
         compound_tense=compound_tense,
+        separable_verb=separable_verb,
     )
