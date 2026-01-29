@@ -28,8 +28,8 @@ async function removeFromStorage(text) {
   await chrome.storage.local.set({ highlights });
 }
 
-export async function getCachedTranslation(text) {
-  const found = (await getHighlights()).find((h) => h.text === text);
+export async function getCachedTranslation(text, context) {
+  const found = (await getHighlights()).find((h) => h.text === text && h.context === context);
   return found?.translation || null;
 }
 

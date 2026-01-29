@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from analyzer import preload_models
 from pipeline import translate_pipeline
+from cache import cache
 
 # Configure logging
 logging.basicConfig(
@@ -64,3 +65,14 @@ def translate(req: TranslateRequest):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/cache/stats")
+def cache_stats():
+    return cache.stats()
+
+
+@app.post("/cache/clear")
+def cache_clear():
+    cache.clear()
+    return {"status": "cleared"}

@@ -54,6 +54,7 @@ def translate_smart(
     lemma: str | None = None,
     is_compound: bool = False,
     compound_parts_to_translate: list[str] | None = None,
+    skip_context_translation: bool = False,
 ) -> dict:
     """
     Combined translation: word + meaning + base form + context translation + compound parts in one LLM call.
@@ -118,8 +119,8 @@ Examples:
 Return JSON with:
 - translation: the equivalent word/phrase in {target_lang}
 - meaning: explain what the word means IN THIS SPECIFIC CONTEXT (one sentence in {target_lang})
-- base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null)
-- context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)
+- base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null){"" if skip_context_translation else f"""
+- context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)"""}
 - is_compound: boolean (only if compound analysis was requested, otherwise omit)
 - parts: array of objects with "part" and "translation" (only if compound parts were provided or is_compound is true)
 

@@ -7,6 +7,7 @@ from breakdown import generate_breakdown
 from translator import translate_smart, translate_simple
 from languages import get_language
 from timing import start_timing_context, record_timing, log_timing_summary, TimingBlock
+from cache import cache, CachedTranslation
 
 # Pre-import compound_split to avoid lazy loading on first request
 try:
@@ -116,6 +117,24 @@ def translate_pipeline(
     with TimingBlock("Step 1: analyze_word"):
         analysis = analyze_word(text, context, source_lang)
     detected_lang = analysis.lang
+
+    # Check cache - full hit (same word+context)
+    cached = cache.get(text, context, detected_lang, target_lang)
+    if cached:
+        log.info(f"[CACHE] HIT for '{text}'")
+        log_timing_summary()
+        return TranslationResult(
+            translation=cached.translation,
+            meaning=cached.meaning,
+            breakdown=cached.breakdown,
+            context_translation=cached.context_translation,
+        )
+
+    # Check if context translation is cached (different word, same context)
+    cached_context_translation = cache.get_context(context, detected_lang, target_lang) if context else None
+    if cached_context_translation:
+        log.info(f"[CACHE] Context HIT - reusing cached context translation")
+
     log.info(f"[STEP 1] Analysis result:")
     log.info(f"         - Language: {analysis.lang}")
     log.info(f"         - Lemma: {analysis.lemma}")
@@ -144,6 +163,7 @@ def translate_pipeline(
             text, detected_lang, target_lang, context, lemma_to_translate,
             is_compound=need_llm_compound_split,
             compound_parts_to_translate=char_split_parts,
+            skip_context_translation=cached_context_translation is not None,
         )
     translation = smart_result["translation"]
     meaning = smart_result["meaning"]
@@ -176,10 +196,23 @@ def translate_pipeline(
     total_ms = (time.perf_counter() - pipeline_start) * 1000
     record_timing("Total pipeline", total_ms)
 
-    # Build context_translation as {source, target} format
+    # Build context_translation (use cached if available, otherwise from LLM)
     context_translation = None
-    if context and context_translation_text:
-        context_translation = {"source": context, "target": context_translation_text}
+    if context:
+        ctx_target = cached_context_translation or context_translation_text
+        if ctx_target:
+            context_translation = {"source": context, "target": ctx_target}
+
+    # Store in cache
+    cache.set(
+        text, context, detected_lang, target_lang,
+        CachedTranslation(
+            translation=translation,
+            meaning=meaning,
+            breakdown=breakdown,
+            context_translation=context_translation,
+        ),
+    )
 
     result = TranslationResult(
         translation=translation,

@@ -85,7 +85,7 @@ async function translate(text, context, range, x, y) {
   showTooltip(x, y);
 
   try {
-    const cached = await getCachedTranslation(text);
+    const cached = await getCachedTranslation(text, context);
     if (cached) return updateTooltip(cached);
 
     const res = await chrome.runtime.sendMessage({ action: "translate", data: { text, context } });
