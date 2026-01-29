@@ -46,52 +46,115 @@ def llm_call(prompt: str, model: str = SMART_MODEL, json_mode: bool = True) -> d
     return content
 
 
-def translate_word(
+def translate_smart(
     word: str,
     source_lang: str,
     target_lang: str,
     context: str = "",
+    lemma: str | None = None,
+    is_compound: bool = False,
+    compound_parts_to_translate: list[str] | None = None,
 ) -> dict:
     """
-    Translate a word with meaning.
+    Combined translation: word + meaning + base form + context translation + compound parts in one LLM call.
+
+    Args:
+        word: The word to translate
+        source_lang: Source language code
+        target_lang: Target language code
+        context: Sentence context for accurate translation (will be translated too)
+        lemma: Base form of word (if different from word)
+        is_compound: Whether to ask LLM to split compound (only if char_split failed)
+        compound_parts_to_translate: Pre-split parts from char_split (LLM just translates them)
 
     Returns:
-        {"translation": str, "meaning": str}
+        {
+            "translation": str,
+            "meaning": str,
+            "base_translation": str | None,
+            "context_translation": str | None,
+            "compound_parts": [("part", "translation"), ...] | None
+        }
     """
-    log.info(f"[TRANSLATE] translate_word('{word}', {source_lang} -> {target_lang})")
+    log.info(f"[TRANSLATE] translate_smart('{word}', {source_lang} -> {target_lang}, lemma={lemma}, is_compound={is_compound}, parts_to_translate={compound_parts_to_translate})")
 
     context_instruction = ""
     if context:
-        context_instruction = f'\nThe word appears in this sentence: "{context}"'
-
-        # Add language-specific prompt additions
+        context_instruction = f'The word appears in this sentence: "{context}"'
         lang_module = get_language(source_lang)
         if lang_module and lang_module.config.translation_prompt_addition:
             context_instruction += lang_module.config.translation_prompt_addition.format(word=word)
 
+    lemma_instruction = ""
+    if lemma and lemma != word:
+        lemma_instruction = f'\nAlso translate the base form "{lemma}" separately.'
+
+    compound_instruction = ""
+    if compound_parts_to_translate:
+        # char_split succeeded - just translate the pre-split parts
+        parts_str = ", ".join(f'"{p}"' for p in compound_parts_to_translate)
+        compound_instruction = f"""
+
+Also translate these compound word parts from {source_lang} to {target_lang}: {parts_str}"""
+    elif is_compound:
+        # char_split failed - ask LLM to split AND translate
+        compound_instruction = f"""
+
+Also analyze if "{word}" in {source_lang} is a compound word (made of multiple meaningful parts).
+
+If it IS a compound word, break it into its component parts and translate each part to {target_lang}.
+If it is NOT a compound word, return is_compound: false.
+
+Examples:
+- "kurzzeitig" (German) -> is_compound: true, parts: [{{part: "kurz", translation: "court"}}, {{part: "zeitig", translation: "temporel"}}]
+- "Handschuh" (German) -> is_compound: true, parts: [{{part: "Hand", translation: "main"}}, {{part: "Schuh", translation: "chaussure"}}]
+- "schnell" (German) -> is_compound: false"""
+
     prompt = f"""Translate "{word}" from {source_lang} to {target_lang}.
 {context_instruction}
+{lemma_instruction}
+{compound_instruction}
 
 Return JSON with:
 - translation: the equivalent word/phrase in {target_lang}
 - meaning: explain what the word means IN THIS SPECIFIC CONTEXT (one sentence in {target_lang})
+- base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null)
+- context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)
+- is_compound: boolean (only if compound analysis was requested, otherwise omit)
+- parts: array of objects with "part" and "translation" (only if compound parts were provided or is_compound is true)
 
 Return ONLY valid JSON."""
 
     result = llm_call(prompt, model=SMART_MODEL)
 
-    # Ensure required fields
     if isinstance(result, dict):
+        # Parse compound parts
+        compound_parts = None
+        parts = result.get("parts", [])
+        if parts:
+            compound_parts = [(p.get("part", ""), p.get("translation", "")) for p in parts if isinstance(p, dict)]
+            log.info(f"[TRANSLATE] Compound parts: {compound_parts}")
+        elif is_compound and not result.get("is_compound", False):
+            log.info(f"[TRANSLATE] LLM says '{word}' is not a compound")
+
         output = {
             "translation": result.get("translation", word),
             "meaning": result.get("meaning", ""),
+            "base_translation": result.get("base_translation"),
+            "context_translation": result.get("context_translation"),
+            "compound_parts": compound_parts,
         }
-        log.info(f"[TRANSLATE] Result: {output}")
+        log.info(f"[TRANSLATE] Smart result: {output}")
         return output
 
     log.warning(f"[TRANSLATE] Unexpected result type: {type(result)}")
-    return {"translation": word, "meaning": ""}
-
+    return {
+        "translation": word,
+        "meaning": "",
+        "base_translation": None,
+        "context_translation": None,
+        "compound_parts": None,
+    }
 
 def translate_simple(word: str, source_lang: str, target_lang: str) -> str:
     """Simple translation - just the translated word."""
@@ -106,67 +169,3 @@ Return ONLY valid JSON."""
     result = llm_call(prompt, model=SIMPLE_MODEL)
     log.info(f"[TRANSLATE] Simple result: '{result}'")
     return result
-
-
-def generate_example(
-    word: str,
-    source_lang: str,
-    target_lang: str,
-    meaning: str = "",
-) -> dict:
-    """
-    Generate an example sentence using the word with the same meaning as in context.
-
-    Returns:
-        {"source": str, "target": str}
-    """
-    log.info(f"[EXAMPLE] Generating example for '{word}' in {source_lang}")
-
-    meaning_instruction = ""
-    if meaning:
-        meaning_instruction = f'The word means: "{meaning}". Use this SAME meaning in the example.'
-
-    prompt = f"""Give one short example sentence using "{word}" in {source_lang}.
-{meaning_instruction}
-Then translate that sentence to {target_lang}.
-
-Return JSON with:
-- source: the example sentence in {source_lang}
-- target: the translation in {target_lang}
-
-Return ONLY valid JSON."""
-
-    result = llm_call(prompt, model=SMART_MODEL)
-
-    if isinstance(result, dict):
-        output = {
-            "source": result.get("source", result.get("example_source", "")),
-            "target": result.get("target", result.get("example_target", "")),
-        }
-        log.info(f"[EXAMPLE] Result: {output}")
-        return output
-
-    log.warning(f"[EXAMPLE] Unexpected result type: {type(result)}")
-    return {"source": "", "target": ""}
-
-
-def translate_compound_parts(parts: list[str], source_lang: str, target_lang: str) -> list[tuple[str, str]]:
-    """Translate individual parts of a compound word."""
-    if not parts:
-        return []
-
-    parts_str = ", ".join(f'"{p}"' for p in parts)
-    prompt = f"""Translate these word parts from {source_lang} to {target_lang}: {parts_str}
-
-Return JSON with:
-- translations: array of objects with "part" and "translation" for each word
-
-Return ONLY valid JSON."""
-
-    result = llm_call(prompt, model=SMART_MODEL)
-
-    if isinstance(result, dict) and "translations" in result:
-        return [(t.get("part", ""), t.get("translation", "")) for t in result["translations"]]
-
-    # Fallback: translate each part individually
-    return [(part, translate_simple(part, source_lang, target_lang)) for part in parts]

@@ -168,8 +168,8 @@ function formatTranslation(data) {
     if (data.translation) html += `<span class="label">Translation:</span> ${esc(data.translation)}<br>`;
     if (data.meaning) html += `<span class="label">Meaning:</span> ${esc(data.meaning)}<br>`;
     if (data.breakdown) html += `<span class="label">Breakdown:</span> ${esc(data.breakdown)}<br>`;
-    if (data.example?.source) {
-      html += `<span class="label">Example:</span><br>• ${esc(data.example.source)}<br>• ${esc(data.example.target)}`;
+    if (data.context_translation?.source) {
+      html += `<span class="label">Context:</span><br>• ${esc(data.context_translation.source)}<br>• ${esc(data.context_translation.target)}`;
     }
     return html || esc(JSON.stringify(data));
   }

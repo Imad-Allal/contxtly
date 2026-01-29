@@ -65,4 +65,8 @@ def generate_breakdown(
         parts_str = " + ".join(f"{part} ({trans})" for part, trans in compound_parts)
         return parts_str
 
+    if analysis.word_type == "compound_adjective" and compound_parts:
+        parts_str = " + ".join(f"{part} ({trans})" for part, trans in compound_parts)
+        return parts_str
+
     return None

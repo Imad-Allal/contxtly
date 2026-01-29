@@ -61,19 +61,19 @@
   font-family: monospace;
 }
 
-.contxtly-example {
+.contxtly-context-translation {
   font-size: 13px;
   border-top: 1px solid #e5e7eb;
   padding-top: 8px;
   margin-top: 4px;
 }
 
-.contxtly-example-source {
+.contxtly-context-translation-source {
   color: #374151;
   font-style: italic;
 }
 
-.contxtly-example-translation {
+.contxtly-context-translation-translation {
   color: #6b7280;
   margin-top: 2px;
 }

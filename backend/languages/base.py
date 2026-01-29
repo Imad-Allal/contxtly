@@ -138,3 +138,9 @@ class LanguageModule(ABC):
         if morph.get("Number") == "Plur":
             return "plural_noun"
         return "simple"
+
+    def classify_adjective(self, token, morph: dict[str, str]) -> str:
+        """Classify an adjective. Override for language-specific logic."""
+        if self.should_split_compound(token.text):
+            return "compound_adjective"
+        return "simple"

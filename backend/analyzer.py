@@ -53,6 +53,40 @@ def get_model(lang: str) -> spacy.Language | None:
     return _models[lang]
 
 
+def preload_models() -> None:
+    """Preload all spaCy models and warm up language detection at startup."""
+    log.info("[PRELOAD] Starting model preload...")
+
+    # Warm up langdetect (loads its models on first call)
+    try:
+        detect("hello world")
+        log.info("[PRELOAD] Language detection warmed up")
+    except LangDetectException:
+        pass
+
+    # Preload all spaCy models
+    spacy_models = get_spacy_models()
+    for lang, model_name in spacy_models.items():
+        if lang not in _models:
+            try:
+                log.info(f"[PRELOAD] Loading spaCy model: {model_name}")
+                _models[lang] = spacy.load(model_name)
+            except OSError as e:
+                log.warning(f"[PRELOAD] Failed to load {model_name}: {e}")
+
+    # Warm up compound_split (loads data files on first use)
+    try:
+        from compound_split import char_split
+        char_split.split_compound("Handschuh")  # Warm up with a sample word
+        log.info("[PRELOAD] compound_split warmed up")
+    except ImportError:
+        log.info("[PRELOAD] compound_split not available")
+    except Exception as e:
+        log.warning(f"[PRELOAD] compound_split warmup failed: {e}")
+
+    log.info(f"[PRELOAD] Completed. Loaded {len(_models)} spaCy models")
+
+
 def parse_morphology(morph) -> dict[str, str]:
     """Parse spaCy morphology into a dict."""
     result = {}
@@ -82,6 +116,12 @@ def classify_word_type(token, lang: str, has_compound_tense: bool = False) -> st
         # Fallback for unsupported languages
         if morph.get("Number") == "Plur":
             return "plural_noun"
+
+    # Adjectives - check for compound adjectives
+    if pos == "ADJ":
+        lang_module = get_language(lang)
+        if lang_module:
+            return lang_module.classify_adjective(token, morph)
 
     return "simple"
 
