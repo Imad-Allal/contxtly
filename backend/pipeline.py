@@ -9,13 +9,6 @@ from languages import get_language
 from timing import start_timing_context, record_timing, log_timing_summary, TimingBlock
 from cache import cache, CachedTranslation
 
-# Pre-import compound_split to avoid lazy loading on first request
-try:
-    from compound_split import char_split
-    _char_split_available = True
-except ImportError:
-    _char_split_available = False
-
 log = logging.getLogger(__name__)
 
 
@@ -35,42 +28,6 @@ class TranslationResult:
         if self.context_translation and self.context_translation.get("source"):
             result["context_translation"] = self.context_translation
         return result
-
-
-def try_split_compound(word: str, lang: str) -> list[str] | None:
-    """Try to split a compound word using language-specific rules."""
-    if not _char_split_available:
-        return None
-
-    lang_module = get_language(lang)
-    if not lang_module or not lang_module.should_split_compound(word):
-        return None
-
-    try:
-        # char_split.split_compound returns list of tuples (score, part1, part2, ...)
-        results = char_split.split_compound(word)
-        if results and len(results) > 0:
-            best = results[0]
-            if isinstance(best, tuple) and len(best) > 1:
-                score = best[0]
-                parts = list(best[1:])
-
-                # Only trust high-confidence splits (positive score)
-                if score < 0.5:
-                    return None
-
-                # Reject if first part is a prefix that shouldn't be split
-                if lang_module.is_compound_prefix(parts[0]):
-                    return None
-
-                if len(parts) > 1:
-                    # Clean linking elements from first part
-                    parts[0] = lang_module.clean_compound_part(parts[0])
-                    return parts
-    except Exception as e:
-        log.warning(f"[COMPOUND] Split failed: {e}")
-
-    return None
 
 
 def translate_pipeline(
@@ -147,55 +104,48 @@ def translate_pipeline(
     # Use separable verb if detected (e.g., "ziehe" → "anziehen")
     word_to_translate = analysis.separable_verb or text
 
-    # Try char_split first (free, local) for compound words
-    is_compound = analysis.word_type in ("compound_noun", "compound_adjective")
-    char_split_parts = None
-    if is_compound:
-        log.info("[STEP 1.5] Trying char_split for compound (free, local)...")
-        char_split_parts = try_split_compound(text, detected_lang)
-        if char_split_parts:
-            log.info(f"[STEP 1.5] char_split succeeded: {char_split_parts}")
-        else:
-            log.info("[STEP 1.5] char_split failed, LLM will handle splitting")
+    # Try to split compound words (NOUN and PROPN - proper nouns like "Bundesverfassungsgericht")
+    compound_parts = None
+    lang_module = get_language(detected_lang)
+    if analysis.pos in ("NOUN", "PROPN") and lang_module:
+        parts = lang_module.split_compound(text)
+        if parts and len(parts) > 1:
+            log.info(f"[STEP 1.5] Compound split: {text} → {parts}")
+            compound_parts = parts
 
-    # Step 2: Smart translate (translation + meaning + base + example + compound in one call)
+    # Step 2: Smart translate (translation + meaning + base + context translation in one call)
     log.info(f"[STEP 2] Smart translating with LLM: '{word_to_translate}'...")
     # For separable verbs, we already have the infinitive - no need to translate lemma separately
     # For regular verbs, translate lemma if different from conjugated form
     lemma_to_translate = None if analysis.separable_verb else (analysis.lemma if analysis.lemma != text else None)
-    # Only ask LLM to split if char_split failed
-    need_llm_compound_split = is_compound and not char_split_parts
     with TimingBlock("Step 2: translate_smart"):
         smart_result = translate_smart(
             word_to_translate, detected_lang, target_lang, context, lemma_to_translate,
-            is_compound=need_llm_compound_split,
-            compound_parts_to_translate=char_split_parts,
             skip_context_translation=cached_context_translation is not None,
+            compound_parts=compound_parts,
         )
     translation = smart_result["translation"]
     meaning = smart_result["meaning"]
     base_translation = smart_result.get("base_translation", translation)
     context_translation_text = smart_result.get("context_translation")
-    compound_parts = smart_result.get("compound_parts")
+    translated_parts = smart_result.get("compound_parts")
     log.info(f"[STEP 2] Translation: '{translation}'")
     log.info(f"[STEP 2] Meaning: '{meaning}'")
     log.info(f"[STEP 2] Base translation: '{base_translation}'")
     if context_translation_text:
         log.info(f"[STEP 2] Context translation: '{context_translation_text}'")
-    if compound_parts:
-        log.info(f"[STEP 2] Compound parts: {compound_parts}")
+    if translated_parts:
+        log.info(f"[STEP 2] Compound parts: {translated_parts}")
 
     # Step 3: Generate breakdown if needed
     breakdown = None
-    if analysis.word_type != "simple":
+    if analysis.word_type != "simple" or translated_parts:
         log.info(f"[STEP 3] Generating breakdown for word_type='{analysis.word_type}'...")
         with TimingBlock("Step 3: breakdown"):
-            # Use base_translation from smart result (already fetched in Step 2)
             if not base_translation:
                 base_translation = translation
 
-            # compound_parts already available from Step 2
-            breakdown = generate_breakdown(analysis, base_translation, compound_parts)
+            breakdown = generate_breakdown(analysis, base_translation, translated_parts)
         log.info(f"[STEP 3] Breakdown: '{breakdown}'")
     else:
         log.info("[STEP 3] Skipping breakdown (word_type='simple')")

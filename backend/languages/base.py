@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 # Universal morphology labels (based on Universal Dependencies)
-# (Work across all languages supported by spaCy)
 UNIVERSAL_MORPH_LABELS = {
     # Tense
     "Tense=Past": "past tense",
@@ -88,13 +87,6 @@ class LanguageConfig:
     name: str  # Display name (e.g., "German", "French")
     spacy_model: str  # spaCy model name
 
-    # Compound word settings (only needed for languages with compounds like German)
-    supports_compounds: bool = False
-    compound_min_length: int = 10
-    compound_prefixes: set[str] = field(default_factory=set)
-    compound_linking_patterns: list[tuple[str, str]] = field(default_factory=list)
-
-
 
 class LanguageModule(ABC):
     """Abstract base class for language modules."""
@@ -105,40 +97,12 @@ class LanguageModule(ABC):
         """Return the language configuration."""
         pass
 
-    def clean_compound_part(self, part: str) -> str:
-        """Remove linking elements from compound parts. Override for language-specific logic."""
-        if not self.config.compound_linking_patterns:
-            return part
-
-        part_lower = part.lower()
-        for link, base in self.config.compound_linking_patterns:
-            if part_lower.endswith(link) and len(part) > len(link) + 2:
-                return part[:-len(link)] + base
-        return part
-
-    def should_split_compound(self, word: str) -> bool:
-        """Check if a word should be considered for compound splitting."""
-        return (
-            self.config.supports_compounds
-            and len(word) >= self.config.compound_min_length
-        )
-
-    def is_compound_prefix(self, part: str) -> bool:
-        """Check if a part is a prefix that shouldn't be split."""
-        if not self.config.compound_prefixes:
-            return False
-        return part.lower() in self.config.compound_prefixes
-
     def classify_noun(self, token, morph: dict[str, str]) -> str:
         """Classify a noun. Override for language-specific logic."""
-        if self.should_split_compound(token.text):
-            return "compound_noun"
         if morph.get("Number") == "Plur":
             return "plural_noun"
         return "simple"
 
-    def classify_adjective(self, token, morph: dict[str, str]) -> str:
-        """Classify an adjective. Override for language-specific logic."""
-        if self.should_split_compound(token.text):
-            return "compound_adjective"
-        return "simple"
+    def split_compound(self, word: str) -> list[str] | None:
+        """Split a compound word. Override for language-specific logic."""
+        return None
