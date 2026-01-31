@@ -46,10 +46,24 @@ def generate_plural_breakdown(analysis: WordAnalysis, singular_translation: str)
     return None
 
 
+def generate_compound_breakdown(compound_parts: list[tuple[str, str, str]]) -> str | None:
+    """Generate breakdown for compound nouns.
+
+    Args:
+        compound_parts: List of (original_part, base_form, translation) tuples
+    """
+    if not compound_parts or len(compound_parts) < 2:
+        return None
+
+    # Format: "krank (sick) + Haus (house)" - using base form
+    parts_str = " + ".join(f"{base} ({trans})" for _, base, trans in compound_parts)
+    return parts_str
+
+
 def generate_breakdown(
     analysis: WordAnalysis,
     base_translation: str,
-    compound_parts: list[tuple[str, str]] | None = None,
+    compound_parts: list[tuple[str, str, str]] | None = None,
 ) -> str | None:
     """
     Generate breakdown for a word based on its type.
@@ -57,11 +71,15 @@ def generate_breakdown(
     Args:
         analysis: WordAnalysis from analyzer
         base_translation: Translation of the lemma/base form
-        compound_parts: Optional list of (part, translation) for compounds
+        compound_parts: Optional list of (part, base, translation) for compounds
 
     Returns:
         Breakdown string or None if word is simple
     """
+    # Compound words take priority
+    if compound_parts:
+        return generate_compound_breakdown(compound_parts)
+
     if analysis.word_type == "simple":
         return None
 
@@ -70,13 +88,5 @@ def generate_breakdown(
 
     if analysis.word_type == "plural_noun":
         return generate_plural_breakdown(analysis, base_translation)
-
-    if analysis.word_type == "compound_noun" and compound_parts:
-        parts_str = " + ".join(f"{part} ({trans})" for part, trans in compound_parts)
-        return parts_str
-
-    if analysis.word_type == "compound_adjective" and compound_parts:
-        parts_str = " + ".join(f"{part} ({trans})" for part, trans in compound_parts)
-        return parts_str
 
     return None

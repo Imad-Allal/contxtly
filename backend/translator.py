@@ -51,9 +51,8 @@ def translate_smart(
     target_lang: str,
     context: str = "",
     lemma: str | None = None,
-    is_compound: bool = False,
-    compound_parts_to_translate: list[str] | None = None,
     skip_context_translation: bool = False,
+    compound_parts: list[str] | None = None,
 ) -> dict:
     """
     Combined translation: word + meaning + base form + context translation + compound parts in one LLM call.
@@ -64,8 +63,8 @@ def translate_smart(
         target_lang: Target language code
         context: Sentence context for accurate translation (will be translated too)
         lemma: Base form of word (if different from word)
-        is_compound: Whether to ask LLM to split compound (only if char_split failed)
-        compound_parts_to_translate: Pre-split parts from char_split (LLM just translates them)
+        skip_context_translation: Skip translating context (if already cached)
+        compound_parts: Pre-split compound parts to translate (e.g., ["Kranken", "Haus"])
 
     Returns:
         {
@@ -73,10 +72,10 @@ def translate_smart(
             "meaning": str,
             "base_translation": str | None,
             "context_translation": str | None,
-            "compound_parts": [("part", "translation"), ...] | None
+            "compound_parts": [("part", "base", "translation"), ...] | None,
         }
     """
-    log.info(f"[TRANSLATE] translate_smart('{word}', {source_lang} -> {target_lang}, lemma={lemma}, is_compound={is_compound}, parts_to_translate={compound_parts_to_translate})")
+    log.info(f"[TRANSLATE] translate_smart('{word}', {source_lang} -> {target_lang}, lemma={lemma}, compound_parts={compound_parts})")
 
     context_instruction = ""
     if context:
@@ -87,25 +86,9 @@ def translate_smart(
         lemma_instruction = f'\nAlso translate the base form "{lemma}" separately.'
 
     compound_instruction = ""
-    if compound_parts_to_translate:
-        # char_split succeeded - just translate the pre-split parts
-        parts_str = ", ".join(f'"{p}"' for p in compound_parts_to_translate)
-        compound_instruction = f"""
-
-Also translate these compound word parts from {source_lang} to {target_lang}: {parts_str}"""
-    elif is_compound:
-        # char_split failed - ask LLM to split AND translate
-        compound_instruction = f"""
-
-Also analyze if "{word}" in {source_lang} is a compound word (made of multiple meaningful parts).
-
-If it IS a compound word, break it into its component parts and translate each part to {target_lang}.
-If it is NOT a compound word, return is_compound: false.
-
-Examples:
-- "kurzzeitig" (German) -> is_compound: true, parts: [{{part: "kurz", translation: "court"}}, {{part: "zeitig", translation: "temporel"}}]
-- "Handschuh" (German) -> is_compound: true, parts: [{{part: "Hand", translation: "main"}}, {{part: "Schuh", translation: "chaussure"}}]
-- "schnell" (German) -> is_compound: false"""
+    if compound_parts:
+        parts_str = ", ".join(f'"{p}"' for p in compound_parts)
+        compound_instruction = f'\nThese are the EXACT compound word parts (do NOT split them further): {parts_str}. For each part, find its dictionary form and translate it. Keep nouns as nouns (e.g., "Gesundheit" stays "Gesundheit", not "gesund"). Only simplify declined/genitive forms (e.g., "Auslands" → "Ausland", "Kranken" → "krank"). Return exactly {len(compound_parts)} parts.'
 
     prompt = f"""Translate "{word}" from {source_lang} to {target_lang}.
 {context_instruction}
@@ -116,30 +99,31 @@ Return JSON with:
 - translation: the equivalent word/phrase in {target_lang}
 - meaning: explain what the word means IN THIS SPECIFIC CONTEXT (one sentence in {target_lang})
 - base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null){"" if skip_context_translation else f"""
-- context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)"""}
-- is_compound: boolean (only if compound analysis was requested, otherwise omit)
-- parts: array of objects with "part" and "translation" (only if compound parts were provided or is_compound is true)
+- context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)"""}{'''
+- parts: array of objects with "part" (original), "base" (lemma/base form), and "translation" (translation of base form) for each compound part (only if compound parts were provided)''' if compound_parts else ''}
 
 Return ONLY valid JSON."""
 
     result = llm_call(prompt, model=SMART_MODEL)
 
     if isinstance(result, dict):
-        # Parse compound parts
-        compound_parts = None
-        parts = result.get("parts", [])
-        if parts:
-            compound_parts = [(p.get("part", ""), p.get("translation", "")) for p in parts if isinstance(p, dict)]
-            log.info(f"[TRANSLATE] Compound parts: {compound_parts}")
-        elif is_compound and not result.get("is_compound", False):
-            log.info(f"[TRANSLATE] LLM says '{word}' is not a compound")
+        # Parse compound parts: (original_part, base_form, translation)
+        translated_parts = None
+        if compound_parts:
+            parts = result.get("parts", [])
+            if parts:
+                translated_parts = [
+                    (p.get("part", ""), p.get("base", p.get("part", "")), p.get("translation", ""))
+                    for p in parts if isinstance(p, dict)
+                ]
+                log.info(f"[TRANSLATE] Compound parts: {translated_parts}")
 
         output = {
             "translation": result.get("translation", word),
             "meaning": result.get("meaning", ""),
             "base_translation": result.get("base_translation"),
             "context_translation": result.get("context_translation"),
-            "compound_parts": compound_parts,
+            "compound_parts": translated_parts,
         }
         log.info(f"[TRANSLATE] Smart result: {output}")
         return output
@@ -152,6 +136,7 @@ Return ONLY valid JSON."""
         "context_translation": None,
         "compound_parts": None,
     }
+
 
 def translate_simple(word: str, source_lang: str, target_lang: str) -> str:
     """Simple translation - just the translated word."""

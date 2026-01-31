@@ -19,7 +19,7 @@ class WordAnalysis:
     pos: str
     morph: dict[str, str]
     lang: str
-    word_type: str  # simple, conjugated_verb, compound_noun, plural_noun
+    word_type: str  # simple, conjugated_verb, plural_noun
     compound_tense: str | None = None  # For compound tenses like Perfekt, Futur I, etc.
     separable_verb: str | None = None  # Reconstructed infinitive for separable verbs (e.g., "anziehen")
 
@@ -75,16 +75,6 @@ def preload_models() -> None:
             except OSError as e:
                 log.warning(f"[PRELOAD] Failed to load {model_name}: {e}")
 
-    # Warm up compound_split (loads data files on first use)
-    try:
-        from compound_split import char_split
-        char_split.split_compound("Handschuh")  # Warm up with a sample word
-        log.info("[PRELOAD] compound_split warmed up")
-    except ImportError:
-        log.info("[PRELOAD] compound_split not available")
-    except Exception as e:
-        log.warning(f"[PRELOAD] compound_split warmup failed: {e}")
-
     log.info(f"[PRELOAD] Completed. Loaded {len(_models)} spaCy models")
 
 
@@ -117,12 +107,6 @@ def classify_word_type(token, lang: str, has_compound_tense: bool = False) -> st
         # Fallback for unsupported languages
         if morph.get("Number") == "Plur":
             return "plural_noun"
-
-    # Adjectives - check for compound adjectives
-    if pos == "ADJ":
-        lang_module = get_language(lang)
-        if lang_module:
-            return lang_module.classify_adjective(token, morph)
 
     return "simple"
 
