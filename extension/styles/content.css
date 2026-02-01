@@ -1,6 +1,6 @@
 .contxtly-btn {
-  position: fixed;
-  z-index: 2147483647;
+  position: absolute;
+  z-index: 9999;
   background: #4f46e5;
   color: white;
   border: none;
@@ -16,8 +16,8 @@
 }
 
 .contxtly-tooltip {
-  position: fixed;
-  z-index: 2147483647;
+  position: absolute;
+  z-index: 9999;
   background: white;
   color: #000;
   border-radius: 8px;
@@ -33,6 +33,30 @@
   color: #141414;
 }
 
+/* Simple translation tooltip - compact inline style */
+.contxtly-tooltip-simple {
+  padding: 8px 8px 8px 12px;
+  max-width: none;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.contxtly-simple-translation {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+}
+
+.contxtly-tooltip.contxtly-tooltip-simple .contxtly-tooltip-delete {
+  position: static;
+  top: auto;
+  right: auto;
+  flex-shrink: 0;
+}
+
 .contxtly-tooltip-error {
   color: #dc2626;
 }
@@ -41,10 +65,15 @@
   margin-bottom: 8px;
 }
 
+.contxtly-section:last-child {
+  margin-bottom: 0;
+}
+
 .contxtly-translation {
   font-size: 16px;
   font-weight: 600;
   color: #1f2937;
+  padding-right: 28px;
 }
 
 .contxtly-meaning {

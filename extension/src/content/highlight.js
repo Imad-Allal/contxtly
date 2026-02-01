@@ -15,11 +15,11 @@ async function saveHighlight(text, translation, context) {
   const url = getUrl();
   const { highlights = {} } = await chrome.storage.local.get("highlights");
   if (!highlights[url]) highlights[url] = [];
-  highlights[url].push({ text, translation, context });
+  highlights[url].push({ text, translation, context, timestamp: Date.now() });
   await chrome.storage.local.set({ highlights });
 }
 
-async function removeFromStorage(text) {
+export async function removeFromStorage(text) {
   const url = getUrl();
   const { highlights = {} } = await chrome.storage.local.get("highlights");
   if (!highlights[url]) return;
@@ -41,6 +41,21 @@ function unwrap(el) {
   parent.normalize();
 }
 
+// Remove all highlights for a given text
+export function removeHighlightFromDOM(text) {
+  document.querySelectorAll('.contxtly-highlight').forEach((mark) => {
+    if (mark.textContent === text) unwrap(mark);
+  });
+}
+
+// Create delete handler for a highlighted word
+function createDeleteHandler(text) {
+  return async () => {
+    await removeFromStorage(text);
+    removeHighlightFromDOM(text);
+  };
+}
+
 function createMark(translation, text) {
   const mark = document.createElement("mark");
   mark.className = CLASS;
@@ -53,10 +68,7 @@ function createMark(translation, text) {
     // Parse back if needed
     let data = mark.dataset.translation;
     try { data = JSON.parse(data); } catch {}
-    showTranslationTooltip(rect.left, rect.bottom, data, async () => {
-      await removeFromStorage(text || mark.textContent);
-      unwrap(mark);
-    });
+    showTranslationTooltip(rect.left, rect.bottom, data, createDeleteHandler(text || mark.textContent));
   };
 
   return mark;

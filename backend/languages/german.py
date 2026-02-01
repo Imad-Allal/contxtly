@@ -47,6 +47,12 @@ def _is_derived_word(word: str, parts: list[str]) -> bool:
         if first_part in VERB_PREFIXES:
             return True
 
+    # Nominalized infinitives: prefix + verb stem ending in "en"
+    # e.g., "Vorhaben" (das Vorhaben = the intention), "Einkommen" (das Einkommen = the income)
+    # These are NOT compounds but nominalized verbs
+    if word_lower.endswith("en") and first_part in VERB_PREFIXES:
+        return True
+
     return False
 
 

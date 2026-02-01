@@ -36,9 +36,11 @@ async function loadWords() {
   const { highlights = {} } = await chrome.storage.local.get("highlights");
 
   const seen = new Set();
-  words = Object.entries(highlights)
-    .flatMap(([url, items]) => items.map((h) => ({ ...h, url })))
-    .reverse()
+  const allWords = Object.entries(highlights)
+    .flatMap(([url, items]) => items.map((h) => ({ ...h, url })));
+
+  words = allWords
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
     .filter((h) => !seen.has(h.text) && seen.add(h.text));
 
   render();
@@ -103,6 +105,7 @@ function render() {
 
   els.wordsList.querySelectorAll(".word-item").forEach((item) => {
     const cb = item.querySelector(".word-checkbox");
+    const link = item.querySelector(".word-link");
     const text = item.dataset.text;
 
     cb.onclick = (e) => {
@@ -111,7 +114,20 @@ function render() {
       updateSelection();
     };
 
-    item.onclick = (e) => e.target !== cb && item.classList.toggle("expanded");
+    // Handle link clicks to open in new tab
+    if (link) {
+      link.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        chrome.tabs.create({ url: link.href });
+      };
+    }
+
+    item.onclick = (e) => {
+      if (e.target !== cb && !e.target.closest(".word-link")) {
+        item.classList.toggle("expanded");
+      }
+    };
   });
 }
 
@@ -139,10 +155,16 @@ async function deleteSelected() {
 
   await chrome.storage.local.set({ highlights });
 
-  // Notify content script
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id) {
-    texts.forEach((text) => chrome.tabs.sendMessage(tab.id, { action: "removeHighlight", text }));
+  // Notify all tabs to remove highlights
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (tab.id) {
+      texts.forEach((text) => {
+        chrome.tabs.sendMessage(tab.id, { action: "removeHighlight", text }).catch(() => {
+          // Ignore errors for tabs that don't have content script
+        });
+      });
+    }
   }
 
   selected.clear();

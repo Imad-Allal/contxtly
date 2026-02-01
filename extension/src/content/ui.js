@@ -21,11 +21,29 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-function formatTranslation(data) {
-  // Handle JSON object
-  console.log("formatTranslation data:", data);
+function isSimpleTranslation(data) {
+  if (typeof data === "string") return true;
   if (typeof data === "object" && data !== null) {
-    console.log("formatTranslation object data:", data);
+    // Simple if only has translation field (no meaning, breakdown, or context_translation)
+    return data.translation && !data.meaning && !data.breakdown && !data.context_translation;
+  }
+  return false;
+}
+
+function formatTranslation(data) {
+  // Handle string (simple translation)
+  if (typeof data === "string") {
+    return `<div class="contxtly-simple-translation">${escapeHtml(data)}</div>`;
+  }
+
+  // Handle JSON object
+  if (typeof data === "object" && data !== null) {
+    // Simple translation - object with only translation field
+    if (isSimpleTranslation(data)) {
+      return `<div class="contxtly-simple-translation">${escapeHtml(data.translation)}</div>`;
+    }
+
+    // Smart translation - multiple fields
     let html = "";
 
     if (data.translation) {
@@ -51,9 +69,11 @@ function formatTranslation(data) {
 }
 
 function setPosition(el, x, y, w, h) {
+  const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop;
   const pos = clamp(x, y + 10, w, h);
-  el.style.left = `${pos.x}px`;
-  el.style.top = `${pos.y}px`;
+  el.style.left = `${pos.x + scrollX}px`;
+  el.style.top = `${pos.y + scrollY}px`;
 }
 
 // Button
@@ -88,10 +108,24 @@ export function showTooltip(x, y) {
   document.body.appendChild(tooltip);
 }
 
-export function updateTooltip(content, isError = false) {
+export function updateTooltip(content, isError = false, onDelete = null) {
   if (!tooltip) return;
-  tooltip.className = `contxtly-tooltip${isError ? " contxtly-tooltip-error" : ""}`;
+  const simpleClass = isSimpleTranslation(content) ? " contxtly-tooltip-simple" : "";
+  tooltip.className = `contxtly-tooltip${isError ? " contxtly-tooltip-error" : ""}${simpleClass}`;
   tooltip.innerHTML = isError ? escapeHtml(content) : formatTranslation(content);
+
+  // Add delete button if onDelete callback is provided
+  if (!isError && onDelete) {
+    const btn = document.createElement("button");
+    btn.className = "contxtly-tooltip-delete";
+    btn.innerHTML = ICONS.delete;
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      onDelete();
+      removeTooltip();
+    };
+    tooltip.appendChild(btn);
+  }
 }
 
 export function removeTooltip() {
@@ -102,7 +136,8 @@ export function removeTooltip() {
 export function showTranslationTooltip(x, y, content, onDelete) {
   removeTooltip();
   tooltip = document.createElement("div");
-  tooltip.className = "contxtly-tooltip";
+  const simpleClass = isSimpleTranslation(content) ? " contxtly-tooltip-simple" : "";
+  tooltip.className = `contxtly-tooltip${simpleClass}`;
   tooltip.innerHTML = formatTranslation(content);
 
   if (onDelete) {
