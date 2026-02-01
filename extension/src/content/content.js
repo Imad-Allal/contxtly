@@ -1,5 +1,5 @@
 import { showButton, removeButton, showTooltip, updateTooltip, removeTooltip, isOwnElement } from "./ui.js";
-import { highlightSelection, getCachedTranslation } from "./highlight.js";
+import { highlightSelection, getCachedTranslation, removeFromStorage, removeHighlightFromDOM } from "./highlight.js";
 
 const MAX_LENGTH = 500;
 const SENTENCE_END = /[.!?]/;
@@ -80,20 +80,30 @@ function findBoundary(text, pos, dir) {
   return dir < 0 ? 0 : text.length;
 }
 
+// Create delete handler for a translation
+function createDeleteHandler(text) {
+  return async () => {
+    await removeFromStorage(text);
+    removeHighlightFromDOM(text);
+  };
+}
+
 // Translate
 async function translate(text, context, range, x, y) {
   showTooltip(x, y);
 
   try {
     const cached = await getCachedTranslation(text, context);
-    if (cached) return updateTooltip(cached);
+    if (cached) {
+      return updateTooltip(cached, false, createDeleteHandler(text));
+    }
 
     const res = await chrome.runtime.sendMessage({ action: "translate", data: { text, context } });
 
     if (res.error) {
       updateTooltip(res.error, true);
     } else {
-      updateTooltip(res);
+      updateTooltip(res, false, createDeleteHandler(text));
       highlightSelection(range, text, res);
     }
   } catch {
@@ -119,10 +129,14 @@ document.addEventListener("mouseup", (e) => {
     const context = extractSentence(selection);
     const range = trimRange(selection);
     const text = range?.toString() || raw;
-    showButton(e.clientX, e.clientY, () => translate(text, context, range, e.clientX, e.clientY));
+
+    const rect = (range || selection.getRangeAt(0)).getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.bottom;
+
+    showButton(x, y, () => translate(text, context, range, x, y));
   }
 });
 
 document.addEventListener("mousedown", (e) => !isOwnElement(e.target) && dismissPopups());
 document.addEventListener("keydown", (e) => e.key === "Escape" && dismissPopups());
-window.addEventListener("scroll", dismissPopups, { passive: true });
