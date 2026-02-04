@@ -19,9 +19,10 @@ class WordAnalysis:
     pos: str
     morph: dict[str, str]
     lang: str
-    word_type: str  # simple, conjugated_verb, plural_noun
+    word_type: str  # simple, conjugated_verb, plural_noun, separable_prefix
     compound_tense: str | None = None  # For compound tenses like Perfekt, Futur I, etc.
     separable_verb: str | None = None  # Reconstructed infinitive for separable verbs (e.g., "anziehen")
+    separable_verb_info: tuple[str, dict[str, str]] | None = None  # (verb_text, verb_morph) when detected from prefix
 
 
 def detect_language(text: str) -> str:
@@ -175,12 +176,24 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto") -> Wor
         compound_tense = lang_module.detect_compound_tense(text, doc)
 
     # Detect separable verbs (e.g., "ziehe" in "Ich ziehe mich an" → "anziehen")
+    # Also detect from prefix (e.g., "nieder" in "Er legte nieder" → "niederlegen")
     separable_verb = None
-    if lang_module and hasattr(lang_module, "detect_separable_verb") and context:
-        separable_verb = lang_module.detect_separable_verb(text, doc)
+    separable_verb_info = None
+    if lang_module and context:
+        if hasattr(lang_module, "detect_separable_verb"):
+            separable_verb = lang_module.detect_separable_verb(text, doc)
+        if not separable_verb and hasattr(lang_module, "detect_separable_verb_from_prefix"):
+            result = lang_module.detect_separable_verb_from_prefix(text, doc)
+            if result:
+                separable_verb, verb_text, verb_morph = result
+                separable_verb_info = (verb_text, verb_morph)
 
     # Classify word type (compound tense affects classification)
-    word_type = classify_word_type(token, lang, has_compound_tense=bool(compound_tense))
+    # If detected from prefix, override to separable_prefix
+    if separable_verb_info:
+        word_type = "separable_prefix"
+    else:
+        word_type = classify_word_type(token, lang, has_compound_tense=bool(compound_tense))
 
     return WordAnalysis(
         text=token.text,
@@ -191,4 +204,5 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto") -> Wor
         word_type=word_type,
         compound_tense=compound_tense,
         separable_verb=separable_verb,
+        separable_verb_info=separable_verb_info,
     )

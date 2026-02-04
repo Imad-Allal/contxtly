@@ -11,19 +11,22 @@ async function getHighlights() {
   return highlights[getUrl()] || [];
 }
 
-async function saveHighlight(text, translation, context) {
+async function saveHighlight(originalText, translation, context) {
   const url = getUrl();
   const { highlights = {} } = await chrome.storage.local.get("highlights");
   if (!highlights[url]) highlights[url] = [];
-  highlights[url].push({ text, translation, context, timestamp: Date.now() });
+  // Store both original text (for DOM matching) and lemma (base form for learning)
+  const lemma = translation?.lemma || originalText;
+  highlights[url].push({ text: originalText, lemma, translation, context, timestamp: Date.now() });
   await chrome.storage.local.set({ highlights });
 }
 
-export async function removeFromStorage(text) {
+export async function removeFromStorage(lemma) {
   const url = getUrl();
   const { highlights = {} } = await chrome.storage.local.get("highlights");
   if (!highlights[url]) return;
-  highlights[url] = highlights[url].filter((h) => h.text !== text);
+  // Filter by lemma (base form) - this removes all inflected forms of the same word
+  highlights[url] = highlights[url].filter((h) => (h.lemma || h.text) !== lemma);
   if (!highlights[url].length) delete highlights[url];
   await chrome.storage.local.set({ highlights });
 }
@@ -41,18 +44,22 @@ function unwrap(el) {
   parent.normalize();
 }
 
-// Remove all highlights for a given text
-export function removeHighlightFromDOM(text) {
+// Remove all highlights for a given lemma (checks dataset for matching lemma)
+export function removeHighlightFromDOM(lemma) {
   document.querySelectorAll('.contxtly-highlight').forEach((mark) => {
-    if (mark.textContent === text) unwrap(mark);
+    // Check if this mark's translation has the same lemma
+    let data = mark.dataset.translation;
+    try { data = JSON.parse(data); } catch {}
+    const markLemma = data?.lemma || mark.textContent;
+    if (markLemma === lemma) unwrap(mark);
   });
 }
 
-// Create delete handler for a highlighted word
-function createDeleteHandler(text) {
+// Create delete handler for a highlighted word (uses lemma for deletion)
+function createDeleteHandler(lemma) {
   return async () => {
-    await removeFromStorage(text);
-    removeHighlightFromDOM(text);
+    await removeFromStorage(lemma);
+    removeHighlightFromDOM(lemma);
   };
 }
 
@@ -68,7 +75,9 @@ function createMark(translation, text) {
     // Parse back if needed
     let data = mark.dataset.translation;
     try { data = JSON.parse(data); } catch {}
-    showTranslationTooltip(rect.left, rect.bottom, data, createDeleteHandler(text || mark.textContent));
+    // Use lemma for delete handler
+    const lemma = data?.lemma || text || mark.textContent;
+    showTranslationTooltip(rect.left, rect.bottom, data, createDeleteHandler(lemma));
   };
 
   return mark;
@@ -81,6 +90,30 @@ function getContext(range, text) {
   const idx = full.indexOf(text);
   if (idx === -1) return "";
   return full.slice(Math.max(0, idx - 30), Math.min(full.length, idx + text.length + 30));
+}
+
+// Find and highlight a related word in the same block
+function highlightRelatedWord(block, relatedText, translation) {
+  if (!block || !relatedText) return;
+
+  const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) => n.parentElement.closest(SKIP) ? NodeFilter.FILTER_REJECT :
+                       n.textContent.includes(relatedText) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT,
+  });
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const idx = node.textContent.indexOf(relatedText);
+    if (idx === -1) continue;
+
+    try {
+      const range = document.createRange();
+      range.setStart(node, idx);
+      range.setEnd(node, idx + relatedText.length);
+      range.surroundContents(createMark(translation, relatedText));
+      return;
+    } catch {}
+  }
 }
 
 // Highlight selection
@@ -109,6 +142,7 @@ export async function highlightSelection(range, text, translation) {
   }
 
   const context = getContext(range, text);
+  const block = parent?.closest("p, div, li, td, article, section") || document.body;
 
   try {
     range.surroundContents(createMark(translation, text));
@@ -120,6 +154,11 @@ export async function highlightSelection(range, text, translation) {
       mark.appendChild(contents);
       range.insertNode(mark);
     } catch {}
+  }
+
+  // Highlight related word (other part of separable verb)
+  if (translation?.related_word) {
+    highlightRelatedWord(block, translation.related_word, translation);
   }
 
   await saveHighlight(text, translation, context);
@@ -159,7 +198,14 @@ async function restore() {
 // Message listener
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.action === "removeHighlight") {
-    document.querySelectorAll(`.${CLASS}`).forEach((m) => m.textContent === msg.text && unwrap(m));
+    // Remove highlights by lemma
+    const targetLemma = msg.lemma || msg.text;
+    document.querySelectorAll(`.${CLASS}`).forEach((mark) => {
+      let data = mark.dataset.translation;
+      try { data = JSON.parse(data); } catch {}
+      const markLemma = data?.lemma || mark.textContent;
+      if (markLemma === targetLemma) unwrap(mark);
+    });
   }
 });
 

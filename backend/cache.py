@@ -11,6 +11,7 @@ class CachedTranslation:
     meaning: str | None
     breakdown: str | None
     context_translation: dict | None  # {"source": ..., "target": ...}
+    lemma: str | None = None  # Base form of the word
 
 
 class TranslationCache:

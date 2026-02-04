@@ -96,7 +96,7 @@ def translate_smart(
 {compound_instruction}
 
 Return JSON with:
-- translation: the equivalent word/phrase in {target_lang}
+- translation: the context-appropriate translation in {target_lang} (MUST match the meaning used in the context sentence, not just the most common dictionary definition)
 - meaning: explain what the word means IN THIS SPECIFIC CONTEXT (one sentence in {target_lang})
 - base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null){"" if skip_context_translation else f"""
 - context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)"""}{'''

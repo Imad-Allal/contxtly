@@ -18,6 +18,8 @@ class TranslationResult:
     meaning: str | None = None
     breakdown: str | None = None
     context_translation: dict | None = None  # {"source": original context, "target": translated context}
+    lemma: str | None = None  # Base form of the word (e.g., "strittig" for "strittige")
+    related_word: str | None = None  # Other part of separable verb (e.g., "nieder" when translating "legte")
 
     def to_dict(self) -> dict:
         result = {"translation": self.translation}
@@ -27,6 +29,10 @@ class TranslationResult:
             result["breakdown"] = self.breakdown
         if self.context_translation and self.context_translation.get("source"):
             result["context_translation"] = self.context_translation
+        if self.lemma:
+            result["lemma"] = self.lemma
+        if self.related_word:
+            result["related_word"] = self.related_word
         return result
 
 
@@ -85,6 +91,7 @@ def translate_pipeline(
             meaning=cached.meaning,
             breakdown=cached.breakdown,
             context_translation=cached.context_translation,
+            lemma=cached.lemma,
         )
 
     # Check if context translation is cached (different word, same context)
@@ -104,10 +111,10 @@ def translate_pipeline(
     # Use separable verb if detected (e.g., "ziehe" → "anziehen")
     word_to_translate = analysis.separable_verb or text
 
-    # Try to split compound words (NOUN and PROPN - proper nouns like "Bundesverfassungsgericht")
+    # Try to split compound words (NOUN, PROPN, ADJ - German has compound adjectives too)
     compound_parts = None
     lang_module = get_language(detected_lang)
-    if analysis.pos in ("NOUN", "PROPN") and lang_module:
+    if analysis.pos in ("NOUN", "PROPN", "ADJ") and lang_module:
         parts = lang_module.split_compound(text)
         if parts and len(parts) > 1:
             log.info(f"[STEP 1.5] Compound split: {text} → {parts}")
@@ -160,6 +167,20 @@ def translate_pipeline(
         if ctx_target:
             context_translation = {"source": context, "target": ctx_target}
 
+    # Determine the base form to save:
+    # - For separable verbs: use the reconstructed infinitive (e.g., "anziehen")
+    # - For other words: use the lemma from spaCy (e.g., "strittig" for "strittige")
+    lemma = analysis.separable_verb or analysis.lemma
+
+    # Determine related word for separable verbs (the other part to highlight)
+    related_word = None
+    if analysis.separable_verb_info:
+        # User selected prefix → related word is the verb
+        related_word = analysis.separable_verb_info[0]  # verb text
+    elif analysis.separable_verb:
+        # User selected verb → related word is the prefix
+        related_word = analysis.separable_verb.replace(analysis.lemma, "")
+
     # Store in cache
     cache.set(
         text, context, detected_lang, target_lang,
@@ -168,6 +189,7 @@ def translate_pipeline(
             meaning=meaning,
             breakdown=breakdown,
             context_translation=context_translation,
+            lemma=lemma,
         ),
     )
 
@@ -176,6 +198,8 @@ def translate_pipeline(
         meaning=meaning,
         breakdown=breakdown,
         context_translation=context_translation,
+        lemma=lemma,
+        related_word=related_word,
     )
     log.info(f"[PIPELINE] Final result: {result.to_dict()}")
 
