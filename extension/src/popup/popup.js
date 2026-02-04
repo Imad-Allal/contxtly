@@ -39,9 +39,13 @@ async function loadWords() {
   const allWords = Object.entries(highlights)
     .flatMap(([url, items]) => items.map((h) => ({ ...h, url })));
 
+  // Deduplicate by lemma (base form) - so "strittige" and "strittigen" both show as "strittig"
   words = allWords
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-    .filter((h) => !seen.has(h.text) && seen.add(h.text));
+    .filter((h) => {
+      const key = h.lemma || h.text;
+      return !seen.has(key) && seen.add(key);
+    });
 
   render();
 }
@@ -50,7 +54,8 @@ function getFiltered() {
   const q = els.search.value.toLowerCase().trim();
   if (!q) return words;
   return words.filter((w) => {
-    if (w.text.toLowerCase().includes(q)) return true;
+    const displayWord = w.lemma || w.text;
+    if (displayWord.toLowerCase().includes(q)) return true;
     const t = w.translation;
     if (typeof t === "object") {
       return (t.translation || "").toLowerCase().includes(q) ||
@@ -76,12 +81,16 @@ function render() {
     return;
   }
 
-  els.wordsList.innerHTML = filtered.map((w) => `
-    <div class="word-item${selected.has(w.text) ? " selected" : ""}" data-text="${esc(w.text)}">
-      <input type="checkbox" class="word-checkbox"${selected.has(w.text) ? " checked" : ""}>
+  els.wordsList.innerHTML = filtered.map((w) => {
+    const key = w.lemma || w.text;
+    // Show "text (lemma)" if they differ, otherwise just the word
+    const displayWord = (w.lemma && w.text !== w.lemma) ? `${w.text} (${w.lemma})` : w.text;
+    return `
+    <div class="word-item${selected.has(key) ? " selected" : ""}" data-text="${esc(key)}">
+      <input type="checkbox" class="word-checkbox"${selected.has(key) ? " checked" : ""}>
       <div class="word-content">
         <div class="word-header">
-          <span class="word-text">${esc(w.text)}</span>
+          <span class="word-text">${esc(displayWord)}</span>
           <svg class="word-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6 9 12 15 18 9"/>
           </svg>
@@ -101,7 +110,7 @@ function render() {
         </div>
       </div>
     </div>
-  `).join("");
+  `}).join("");
 
   els.wordsList.querySelectorAll(".word-item").forEach((item) => {
     const cb = item.querySelector(".word-checkbox");
@@ -145,11 +154,12 @@ function updateSelection() {
 async function deleteSelected() {
   if (!selected.size) return;
 
-  const texts = [...selected];
+  const lemmas = [...selected];
   const { highlights = {} } = await chrome.storage.local.get("highlights");
 
   for (const url of Object.keys(highlights)) {
-    highlights[url] = highlights[url].filter((h) => !texts.includes(h.text));
+    // Filter by lemma (base form)
+    highlights[url] = highlights[url].filter((h) => !lemmas.includes(h.lemma || h.text));
     if (!highlights[url].length) delete highlights[url];
   }
 
@@ -159,8 +169,8 @@ async function deleteSelected() {
   const tabs = await chrome.tabs.query({});
   for (const tab of tabs) {
     if (tab.id) {
-      texts.forEach((text) => {
-        chrome.tabs.sendMessage(tab.id, { action: "removeHighlight", text }).catch(() => {
+      lemmas.forEach((lemma) => {
+        chrome.tabs.sendMessage(tab.id, { action: "removeHighlight", lemma }).catch(() => {
           // Ignore errors for tabs that don't have content script
         });
       });
@@ -174,9 +184,12 @@ async function deleteSelected() {
 
 function toggleSelectAll() {
   const filtered = getFiltered();
-  const allSelected = filtered.every((w) => selected.has(w.text));
+  const allSelected = filtered.every((w) => selected.has(w.lemma || w.text));
 
-  filtered.forEach((w) => allSelected ? selected.delete(w.text) : selected.add(w.text));
+  filtered.forEach((w) => {
+    const key = w.lemma || w.text;
+    allSelected ? selected.delete(key) : selected.add(key);
+  });
   updateSelection();
 }
 

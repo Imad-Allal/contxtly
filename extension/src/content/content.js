@@ -103,7 +103,9 @@ async function translate(text, context, range, x, y) {
     if (res.error) {
       updateTooltip(res.error, true);
     } else {
-      updateTooltip(res, false, createDeleteHandler(text));
+      // Use lemma (base form) for storage key if available
+      const wordToSave = res.lemma || text;
+      updateTooltip(res, false, createDeleteHandler(wordToSave));
       highlightSelection(range, text, res);
     }
   } catch {

@@ -5,14 +5,23 @@ from languages.base import describe_morphology
 
 
 def generate_verb_breakdown(analysis: WordAnalysis, lemma_translation: str) -> str | None:
-    """Generate breakdown for conjugated verbs using spaCy morphology."""
-    if analysis.word_type != "conjugated_verb":
+    """Generate breakdown for conjugated verbs and separable verb prefixes."""
+    if analysis.word_type not in ("conjugated_verb", "separable_prefix"):
         return None
 
     # Use separable verb infinitive if detected, otherwise use lemma
     infinitive = analysis.separable_verb or analysis.lemma
 
-    # For separable verbs, show the split form: "fängt + an"
+    # For separable verbs detected from prefix, use verb info
+    if analysis.separable_verb_info:
+        verb_text, verb_morph = analysis.separable_verb_info
+        conjugated = f"{verb_text} + {analysis.text}"
+        morph_desc = describe_morphology(verb_morph, include=["Tense", "Person", "Number", "Mood"])
+        if morph_desc:
+            return f"{infinitive} ({lemma_translation}) → {conjugated} ({morph_desc})"
+        return f"{infinitive} ({lemma_translation}) → {conjugated}"
+
+    # For separable verbs detected from verb stem, show the split form: "fängt + an"
     conjugated = analysis.text
     if analysis.separable_verb:
         # Extract prefix from separable verb (e.g., "anfangen" → "an")
@@ -80,11 +89,11 @@ def generate_breakdown(
     if compound_parts:
         return generate_compound_breakdown(compound_parts)
 
+    if analysis.word_type in ("conjugated_verb", "separable_prefix"):
+        return generate_verb_breakdown(analysis, base_translation)
+
     if analysis.word_type == "simple":
         return None
-
-    if analysis.word_type == "conjugated_verb":
-        return generate_verb_breakdown(analysis, base_translation)
 
     if analysis.word_type == "plural_noun":
         return generate_plural_breakdown(analysis, base_translation)

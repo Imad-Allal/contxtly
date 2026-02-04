@@ -7,7 +7,14 @@ from languages.base import LanguageConfig, LanguageModule
 log = logging.getLogger(__name__)
 
 # Derivational suffixes - words ending in these are derived from verbs/adjectives
-DERIVATIONAL_SUFFIXES = ("ung", "heit", "keit", "schaft", "nis", "tum", "ling")
+DERIVATIONAL_SUFFIXES = ("ung", "heit", "keit", "schaft", "nis", "tum", "ling", "atz")
+
+# Verb stems that form nouns when combined with prefixes (without suffix)
+# e.g., aus+fallen -> Ausfall, ein+greifen -> Eingriff
+VERB_STEM_NOUNS = frozenset({
+    "fall", "gang", "griff", "zug", "schlag", "bruch", "schnitt", "schluss",
+    "tritt", "wurf", "ruf", "lauf", "stoß", "druck", "blick", "sprung",
+})
 
 # Verb prefixes - when combined with derivational suffix = derived word, not compound
 VERB_PREFIXES = frozenset({
@@ -47,10 +54,18 @@ def _is_derived_word(word: str, parts: list[str]) -> bool:
         if first_part in VERB_PREFIXES:
             return True
 
-    # Nominalized infinitives: prefix + verb stem ending in "en"
-    # e.g., "Vorhaben" (das Vorhaben = the intention), "Einkommen" (das Einkommen = the income)
+    # Nominalized infinitives: prefix + verb infinitive ending in "en"
+    # e.g., "Vorhaben" (vor + haben), "Einkommen" (ein + kommen)
     # These are NOT compounds but nominalized verbs
-    if word_lower.endswith("en") and first_part in VERB_PREFIXES:
+    # Check: second part must also end in "en" (the verb infinitive part)
+    # This distinguishes "Vorhaben" (vor+haben) from "Vorgarten" (vor+Garten)
+    second_part = parts[1].lower()
+    if word_lower.endswith("en") and first_part in VERB_PREFIXES and second_part.endswith("en"):
+        return True
+
+    # Verb stem nouns: prefix + verb stem (no suffix)
+    # e.g., "Ausfall" (aus + fallen -> fall), "Eingriff" (ein + greifen -> griff)
+    if first_part in VERB_PREFIXES and second_part in VERB_STEM_NOUNS:
         return True
 
     return False
@@ -118,9 +133,11 @@ def split_compound(word: str, _depth: int = 0) -> list[str] | None:
     if len(word) < 6:
         return None
 
-    # Use lower threshold for very long words (they tend to have lower CharSplit scores)
-    if len(word) >= 18:
-        min_score = -1.0  # Very long compounds
+    # Use lower threshold for long words (they tend to have lower CharSplit scores)
+    if len(word) >= 15:
+        min_score = -1.0  # Long compounds
+    elif len(word) >= 10:
+        min_score = 0.0   # Medium compounds
     elif _depth > 0:
         min_score = 0.5   # Stricter for recursive splits
     else:
@@ -193,6 +210,49 @@ def detect_separable_verb(word: str, doc: spacy.tokens.Doc) -> str | None:
     return None
 
 
+def detect_separable_verb_from_prefix(word: str, doc: spacy.tokens.Doc) -> tuple[str, str, dict] | None:
+    """
+    Detect full separable verb when user selects the prefix/particle.
+
+    Example: "Er legte das Buch nieder" → "nieder" → "niederlegen"
+
+    Args:
+        word: The selected word (e.g., "nieder")
+        doc: spaCy Doc of the context
+
+    Returns:
+        Tuple of (infinitive, verb_text, verb_morph) or None if not a separable verb particle
+    """
+    target_token = None
+    for token in doc:
+        if token.text.lower() == word.lower():
+            target_token = token
+            break
+
+    if not target_token:
+        return None
+
+    # Check if this token is a separable verb particle (PTKVZ tag or svp dependency)
+    if target_token.tag_ != "PTKVZ" and target_token.dep_ != "svp":
+        return None
+
+    # The head of the particle is the verb stem
+    verb_token = target_token.head
+    if verb_token.pos_ != "VERB":
+        return None
+
+    # Parse verb morphology
+    verb_morph = {}
+    for item in verb_token.morph:
+        if "=" in item:
+            key, val = item.split("=", 1)
+            verb_morph[key] = val
+
+    # Return infinitive, verb text, and verb morphology
+    infinitive = word.lower() + verb_token.lemma_
+    return (infinitive, verb_token.text, verb_morph)
+
+
 # German compound tense patterns
 GERMAN_COMPOUND_TENSES = {
     ("haben", "Pres", "Part"): "Perfekt (present perfect)",
@@ -250,6 +310,10 @@ class German(LanguageModule):
     def detect_separable_verb(self, word: str, doc: spacy.tokens.Doc) -> str | None:
         """Detect and reconstruct separable verbs from context."""
         return detect_separable_verb(word, doc)
+
+    def detect_separable_verb_from_prefix(self, word: str, doc: spacy.tokens.Doc) -> str | None:
+        """Detect full verb when user selects a separable verb prefix."""
+        return detect_separable_verb_from_prefix(word, doc)
 
     def split_compound(self, word: str) -> list[str] | None:
         """Split a compound word into parts."""
