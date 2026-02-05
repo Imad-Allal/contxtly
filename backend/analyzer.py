@@ -5,6 +5,7 @@ from langdetect import detect, LangDetectException
 import spacy
 
 from languages import get_language, get_spacy_models
+from languages.base import LanguageAnalysis
 from timing import record_timing
 
 log = logging.getLogger(__name__)
@@ -19,10 +20,8 @@ class WordAnalysis:
     pos: str
     morph: dict[str, str]
     lang: str
-    word_type: str  # simple, conjugated_verb, plural_noun, separable_prefix
-    compound_tense: str | None = None  # For compound tenses like Perfekt, Futur I, etc.
-    separable_verb: str | None = None  # Reconstructed infinitive for separable verbs (e.g., "anziehen")
-    separable_verb_info: tuple[str, dict[str, str]] | None = None  # (verb_text, verb_morph) when detected from prefix
+    word_type: str  # simple, conjugated_verb, plural_noun, separable_prefix, collocation_verb, collocation_prep
+    lang_analysis: LanguageAnalysis | None = None
 
 
 def detect_language(text: str) -> str:
@@ -89,15 +88,14 @@ def parse_morphology(morph) -> dict[str, str]:
     return result
 
 
-def classify_word_type(token, lang: str, has_compound_tense: bool = False) -> str:
+def classify_word_type(token, lang: str) -> str:
     """Classify word type based on POS and morphology."""
     pos = token.pos_
     morph = parse_morphology(token.morph)
 
-    # Verbs with tense/mood markers
+    # Verbs with tense/mood markers (excluding bare infinitives)
     if pos == "VERB" and any(k in morph for k in ["Tense", "Mood", "VerbForm"]):
-        # Include infinitives if they're part of a compound tense (e.g., "wird sprechen")
-        if morph.get("VerbForm") != "Inf" or has_compound_tense:
+        if morph.get("VerbForm") != "Inf":
             return "conjugated_verb"
 
     # Nouns - use language module for classification
@@ -169,31 +167,15 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto") -> Wor
 
     morph = parse_morphology(token.morph)
 
-    # Detect compound tenses (e.g., Perfekt, Futur I) from context
-    compound_tense = None
+    # Run language-specific analysis (separable verbs, collocations, compound tenses, etc.)
     lang_module = get_language(lang)
-    if lang_module and hasattr(lang_module, "detect_compound_tense") and context:
-        compound_tense = lang_module.detect_compound_tense(text, doc)
-
-    # Detect separable verbs (e.g., "ziehe" in "Ich ziehe mich an" → "anziehen")
-    # Also detect from prefix (e.g., "nieder" in "Er legte nieder" → "niederlegen")
-    separable_verb = None
-    separable_verb_info = None
+    lang_analysis = None
     if lang_module and context:
-        if hasattr(lang_module, "detect_separable_verb"):
-            separable_verb = lang_module.detect_separable_verb(text, doc)
-        if not separable_verb and hasattr(lang_module, "detect_separable_verb_from_prefix"):
-            result = lang_module.detect_separable_verb_from_prefix(text, doc)
-            if result:
-                separable_verb, verb_text, verb_morph = result
-                separable_verb_info = (verb_text, verb_morph)
+        lang_analysis = lang_module.analyze(text, token, doc, morph)
 
-    # Classify word type (compound tense affects classification)
-    # If detected from prefix, override to separable_prefix
-    if separable_verb_info:
-        word_type = "separable_prefix"
-    else:
-        word_type = classify_word_type(token, lang, has_compound_tense=bool(compound_tense))
+    # word_type: language analysis overrides generic POS-based classification
+    word_type = (lang_analysis.word_type if lang_analysis and lang_analysis.word_type
+                 else classify_word_type(token, lang))
 
     return WordAnalysis(
         text=token.text,
@@ -202,7 +184,5 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto") -> Wor
         morph=morph,
         lang=lang,
         word_type=word_type,
-        compound_tense=compound_tense,
-        separable_verb=separable_verb,
-        separable_verb_info=separable_verb_info,
+        lang_analysis=lang_analysis,
     )

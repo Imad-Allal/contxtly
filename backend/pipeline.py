@@ -19,7 +19,8 @@ class TranslationResult:
     breakdown: str | None = None
     context_translation: dict | None = None  # {"source": original context, "target": translated context}
     lemma: str | None = None  # Base form of the word (e.g., "strittig" for "strittige")
-    related_word: str | None = None  # Other part of separable verb (e.g., "nieder" when translating "legte")
+    related_words: list[dict] | None = None  # Other parts to highlight [{text, offset}, ...] (e.g., for "ausgehen": [{text:"von", offset:42}, {text:"aus", offset:70}])
+    collocation_pattern: str | None = None  # Full pattern for display (e.g., "ausgehen + von")
 
     def to_dict(self) -> dict:
         result = {"translation": self.translation}
@@ -31,8 +32,10 @@ class TranslationResult:
             result["context_translation"] = self.context_translation
         if self.lemma:
             result["lemma"] = self.lemma
-        if self.related_word:
-            result["related_word"] = self.related_word
+        if self.related_words:
+            result["related_words"] = self.related_words
+        if self.collocation_pattern:
+            result["collocation_pattern"] = self.collocation_pattern
         return result
 
 
@@ -99,17 +102,19 @@ def translate_pipeline(
     if cached_context_translation:
         log.info(f"[CACHE] Context HIT - reusing cached context translation")
 
+    la = analysis.lang_analysis  # LanguageAnalysis | None
+
     log.info(f"[STEP 1] Analysis result:")
     log.info(f"         - Language: {analysis.lang}")
     log.info(f"         - Lemma: {analysis.lemma}")
     log.info(f"         - POS: {analysis.pos}")
     log.info(f"         - Morph: {analysis.morph}")
     log.info(f"         - Word type: {analysis.word_type}")
-    if analysis.separable_verb:
-        log.info(f"         - Separable verb: {analysis.separable_verb}")
+    if la:
+        log.info(f"         - Lang analysis: translate={la.translate}, pattern={la.pattern}")
 
-    # Use separable verb if detected (e.g., "ziehe" → "anziehen")
-    word_to_translate = analysis.separable_verb or text
+    # What to translate: language analysis may override (e.g. collocation verb, separable infinitive)
+    word_to_translate = (la.translate if la else None) or text
 
     # Try to split compound words (NOUN, PROPN, ADJ - German has compound adjectives too)
     compound_parts = None
@@ -122,14 +127,16 @@ def translate_pipeline(
 
     # Step 2: Smart translate (translation + meaning + base + context translation in one call)
     log.info(f"[STEP 2] Smart translating with LLM: '{word_to_translate}'...")
-    # For separable verbs, we already have the infinitive - no need to translate lemma separately
-    # For regular verbs, translate lemma if different from conjugated form
-    lemma_to_translate = None if analysis.separable_verb else (analysis.lemma if analysis.lemma != text else None)
+    # Skip separate lemma translation when lang_analysis already provides the translate word
+    lemma_to_translate = None if (la and la.translate) else (analysis.lemma if analysis.lemma != text else None)
+    # LLM hint for better translation (e.g. collocation pattern)
+    llm_hint = la.llm_hint if la else None
     with TimingBlock("Step 2: translate_smart"):
         smart_result = translate_smart(
             word_to_translate, detected_lang, target_lang, context, lemma_to_translate,
             skip_context_translation=cached_context_translation is not None,
             compound_parts=compound_parts,
+            collocation_pattern=llm_hint,
         )
     translation = smart_result["translation"]
     meaning = smart_result["meaning"]
@@ -152,7 +159,10 @@ def translate_pipeline(
             if not base_translation:
                 base_translation = translation
 
-            breakdown = generate_breakdown(analysis, base_translation, translated_parts)
+            if la and la.breakdown_fn:
+                breakdown = la.breakdown_fn(analysis, base_translation)
+            else:
+                breakdown = generate_breakdown(analysis, base_translation, translated_parts)
         log.info(f"[STEP 3] Breakdown: '{breakdown}'")
     else:
         log.info("[STEP 3] Skipping breakdown (word_type='simple')")
@@ -167,19 +177,14 @@ def translate_pipeline(
         if ctx_target:
             context_translation = {"source": context, "target": ctx_target}
 
-    # Determine the base form to save:
-    # - For separable verbs: use the reconstructed infinitive (e.g., "anziehen")
-    # - For other words: use the lemma from spaCy (e.g., "strittig" for "strittige")
-    lemma = analysis.separable_verb or analysis.lemma
+    # Determine the base form to save
+    lemma = (la.lemma if la else None) or analysis.lemma
 
-    # Determine related word for separable verbs (the other part to highlight)
-    related_word = None
-    if analysis.separable_verb_info:
-        # User selected prefix → related word is the verb
-        related_word = analysis.separable_verb_info[0]  # verb text
-    elif analysis.separable_verb:
-        # User selected verb → related word is the prefix
-        related_word = analysis.separable_verb.replace(analysis.lemma, "")
+    # Related words for frontend highlighting
+    related_words = [r.to_dict() for r in la.related] if la and la.related else []
+
+    # Display pattern for frontend (e.g. "ausgehen + von")
+    collocation_pattern = la.pattern if la else None
 
     # Store in cache
     cache.set(
@@ -199,7 +204,8 @@ def translate_pipeline(
         breakdown=breakdown,
         context_translation=context_translation,
         lemma=lemma,
-        related_word=related_word,
+        related_words=related_words if related_words else None,
+        collocation_pattern=collocation_pattern,
     )
     log.info(f"[PIPELINE] Final result: {result.to_dict()}")
 

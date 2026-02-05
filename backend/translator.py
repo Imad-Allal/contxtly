@@ -53,6 +53,7 @@ def translate_smart(
     lemma: str | None = None,
     skip_context_translation: bool = False,
     compound_parts: list[str] | None = None,
+    collocation_pattern: str | None = None,
 ) -> dict:
     """
     Combined translation: word + meaning + base form + context translation + compound parts in one LLM call.
@@ -65,6 +66,7 @@ def translate_smart(
         lemma: Base form of word (if different from word)
         skip_context_translation: Skip translating context (if already cached)
         compound_parts: Pre-split compound parts to translate (e.g., ["Kranken", "Haus"])
+        collocation_pattern: Verb+preposition pattern (e.g., "von etwas ausgehen")
 
     Returns:
         {
@@ -75,11 +77,23 @@ def translate_smart(
             "compound_parts": [("part", "base", "translation"), ...] | None,
         }
     """
-    log.info(f"[TRANSLATE] translate_smart('{word}', {source_lang} -> {target_lang}, lemma={lemma}, compound_parts={compound_parts})")
+    log.info(f"[TRANSLATE] translate_smart('{word}', {source_lang} -> {target_lang}, lemma={lemma}, collocation={collocation_pattern})")
 
     context_instruction = ""
     if context:
         context_instruction = f'The word appears in this sentence: "{context}"'
+
+    collocation_instruction = ""
+    if collocation_pattern:
+        collocation_instruction = f"""
+CRITICAL: The word is part of the verb+preposition collocation "{collocation_pattern}".
+You must translate the COLLOCATION as a whole, giving the natural IDIOMATIC equivalent in {target_lang} — NOT a word-for-word literal translation.
+Examples of correct idiomatic translations:
+- "von etwas ausgehen" → French: "partir du principe que / supposer / estimer" (NOT "partir de")
+- "von jemandem etwas erwarten" → French: "s'attendre à quelque chose de la part de quelqu'un" (NOT "prévoir" or "attendre")
+- "auf etwas ankommen" → French: "dépendre de" (NOT "arriver sur")
+Apply the same principle: find the natural {target_lang} expression that carries the same meaning as the German collocation.
+The context_translation MUST also use this idiomatic equivalent, not a literal rendering."""
 
     lemma_instruction = ""
     if lemma and lemma != word:
@@ -92,11 +106,12 @@ def translate_smart(
 
     prompt = f"""Translate "{word}" from {source_lang} to {target_lang}.
 {context_instruction}
+{collocation_instruction}
 {lemma_instruction}
 {compound_instruction}
 
 Return JSON with:
-- translation: the context-appropriate translation in {target_lang} (MUST match the meaning used in the context sentence, not just the most common dictionary definition)
+- translation: {"the idiomatic translation of the COLLOCATION in " + target_lang + " (e.g., the full verbal phrase like 's''attendre à')" if collocation_pattern else "the context-appropriate translation in " + target_lang + " (MUST match the meaning used in the context sentence, not just the most common dictionary definition)"}
 - meaning: explain what the word means IN THIS SPECIFIC CONTEXT (one sentence in {target_lang})
 - base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null){"" if skip_context_translation else f"""
 - context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)"""}{'''
