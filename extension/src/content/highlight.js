@@ -92,10 +92,48 @@ function getContext(range, text) {
   return full.slice(Math.max(0, idx - 30), Math.min(full.length, idx + text.length + 30));
 }
 
-// Find and highlight a related word in the same block
-function highlightRelatedWord(block, relatedText, translation) {
-  if (!block || !relatedText) return;
+// Find and highlight a related word in the same block using character offset
+function highlightRelatedWord(block, relatedWord, translation, context) {
+  if (!block || !relatedWord) return;
 
+  const relatedText = relatedWord.text || relatedWord;
+  const offset = relatedWord.offset;
+
+  // If we have an offset and context, use it to find the exact position
+  if (offset != null && context) {
+    const blockText = block.textContent;
+    const ctxStart = blockText.indexOf(context);
+    if (ctxStart !== -1) {
+      const targetPos = ctxStart + offset; // absolute position in block text
+
+      // Walk ALL text nodes (including inside highlights) to keep char positions aligned
+      const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+
+      let charCount = 0;
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const nodeLen = node.textContent.length;
+        if (charCount + nodeLen > targetPos) {
+          // Skip if this node is already inside a highlight
+          if (node.parentElement.closest(SKIP)) {
+            charCount += nodeLen;
+            continue;
+          }
+          const localIdx = targetPos - charCount;
+          try {
+            const range = document.createRange();
+            range.setStart(node, localIdx);
+            range.setEnd(node, localIdx + relatedText.length);
+            range.surroundContents(createMark(translation, relatedText));
+            return;
+          } catch { /* surroundContents throws on cross-element boundaries */ }
+        }
+        charCount += nodeLen;
+      }
+    }
+  }
+
+  // Fallback: simple text search (for legacy data without offsets)
   const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
     acceptNode: (n) => n.parentElement.closest(SKIP) ? NodeFilter.FILTER_REJECT :
                        n.textContent.includes(relatedText) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT,
@@ -112,7 +150,7 @@ function highlightRelatedWord(block, relatedText, translation) {
       range.setEnd(node, idx + relatedText.length);
       range.surroundContents(createMark(translation, relatedText));
       return;
-    } catch {}
+    } catch { /* surroundContents throws on cross-element boundaries */ }
   }
 }
 
@@ -156,9 +194,10 @@ export async function highlightSelection(range, text, translation) {
     } catch {}
   }
 
-  // Highlight related word (other part of separable verb)
-  if (translation?.related_word) {
-    highlightRelatedWord(block, translation.related_word, translation);
+  // Highlight related words (other parts of separable verb or collocation)
+  const ctxSentence = translation?.context_translation?.source || "";
+  for (const word of translation?.related_words || []) {
+    highlightRelatedWord(block, word, translation, ctxSentence);
   }
 
   await saveHighlight(text, translation, context);

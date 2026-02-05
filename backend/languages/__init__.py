@@ -1,21 +1,14 @@
-from languages.base import LanguageConfig, LanguageModule, describe_morphology
+from languages.base import LanguageConfig, LanguageModule, LanguageAnalysis, describe_morphology
 from languages.german import German
 from languages.french import French
-from languages.spanish import Spanish
 from languages.english import English
-from languages.italian import Italian
-from languages.portuguese import Portuguese
-from languages.dutch import Dutch
+
 
 # Registry of all supported languages
 _LANGUAGES: dict[str, LanguageModule] = {
     "de": German(),
     "fr": French(),
     "en": English(),
-    # "es": Spanish(),
-    # "it": Italian(),
-    # "pt": Portuguese(),
-    # "nl": Dutch(),
 }
 
 
@@ -43,6 +36,7 @@ def supported_languages() -> list[str]:
 __all__ = [
     "LanguageConfig",
     "LanguageModule",
+    "LanguageAnalysis",
     "describe_morphology",
     "get_language",
     "get_config",

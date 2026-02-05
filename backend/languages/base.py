@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Callable
+
+from models import TokenRef
 
 
 # Universal morphology labels (based on Universal Dependencies)
@@ -80,6 +83,18 @@ def describe_morphology(morph_dict: dict[str, str], include: list[str] | None = 
 
 
 @dataclass
+class LanguageAnalysis:
+    """Language-neutral analysis result. Filled by language modules, consumed generically by the pipeline."""
+    translate: str | None = None           # what to send to LLM (e.g. infinitive "ausgehen")
+    lemma: str | None = None               # base form to save/display
+    word_type: str | None = None           # overrides POS-based classification
+    related: list[TokenRef] = field(default_factory=list)  # tokens to highlight in UI
+    pattern: str | None = None             # display string (e.g. "ausgehen + von")
+    llm_hint: str | None = None            # extra context for LLM prompt
+    breakdown_fn: Callable | None = None   # (analysis, base_translation) -> str | None
+
+
+@dataclass
 class LanguageConfig:
     """Configuration for a specific language."""
 
@@ -105,4 +120,8 @@ class LanguageModule(ABC):
 
     def split_compound(self, word: str) -> list[str] | None:
         """Split a compound word. Override for language-specific logic."""
+        return None
+
+    def analyze(self, word: str, token, doc, morph: dict[str, str]) -> LanguageAnalysis | None:
+        """Run language-specific analysis. Override for language-specific logic."""
         return None

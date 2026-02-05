@@ -83,8 +83,17 @@ function render() {
 
   els.wordsList.innerHTML = filtered.map((w) => {
     const key = w.lemma || w.text;
-    // Show "text (lemma)" if they differ, otherwise just the word
-    const displayWord = (w.lemma && w.text !== w.lemma) ? `${w.text} (${w.lemma})` : w.text;
+    // Build display word
+    let displayWord = w.text;
+    const t = w.translation;
+    if (t?.collocation_pattern) {
+      // Show "text/related1/related2 (collocation_pattern)" for collocations
+      const allParts = [w.text, ...(t.related_words || []).map(r => r.text)];
+      displayWord = `${allParts.join("/")} (${t.collocation_pattern})`;
+    } else if (w.lemma && w.text !== w.lemma) {
+      // Show "text (lemma)" if they differ
+      displayWord = `${w.text} (${w.lemma})`;
+    }
     return `
     <div class="word-item${selected.has(key) ? " selected" : ""}" data-text="${esc(key)}">
       <input type="checkbox" class="word-checkbox"${selected.has(key) ? " checked" : ""}>
