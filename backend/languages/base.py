@@ -88,10 +88,13 @@ class LanguageAnalysis:
     translate: str | None = None           # what to send to LLM (e.g. infinitive "ausgehen")
     lemma: str | None = None               # base form to save/display
     word_type: str | None = None           # overrides POS-based classification
-    related: list[TokenRef] = field(default_factory=list)  # tokens to highlight in UI
-    pattern: str | None = None             # display string (e.g. "ausgehen + von")
+    related: list[TokenRef] = field(
+        default_factory=list)  # tokens to highlight in UI
+    # display string (e.g. "ausgehen + von")
+    pattern: str | None = None
     llm_hint: str | None = None            # extra context for LLM prompt
-    breakdown_fn: Callable | None = None   # (analysis, base_translation) -> str | None
+    # (analysis, base_translation) -> str | None
+    breakdown_fn: Callable | None = None
 
 
 @dataclass
@@ -118,10 +121,10 @@ class LanguageModule(ABC):
             return "plural_noun"
         return "simple"
 
-    def split_compound(self, word: str) -> list[str] | None:
+    def split_compound(self, word: str, lemma: str | None = None) -> list[str] | None:
         """Split a compound word. Override for language-specific logic."""
         return None
 
-    def analyze(self, word: str, token, doc, morph: dict[str, str]) -> LanguageAnalysis | None:
+    def analyze(self, word: str, token, doc, morph: dict[str, str], nlp=None) -> LanguageAnalysis | None:
         """Run language-specific analysis. Override for language-specific logic."""
         return None

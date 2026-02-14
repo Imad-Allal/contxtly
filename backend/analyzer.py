@@ -171,7 +171,7 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto") -> Wor
     lang_module = get_language(lang)
     lang_analysis = None
     if lang_module and context:
-        lang_analysis = lang_module.analyze(text, token, doc, morph)
+        lang_analysis = lang_module.analyze(text, token, doc, morph, nlp)
 
     # word_type: language analysis overrides generic POS-based classification
     word_type = (lang_analysis.word_type if lang_analysis and lang_analysis.word_type

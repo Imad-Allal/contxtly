@@ -120,7 +120,7 @@ def translate_pipeline(
     compound_parts = None
     lang_module = get_language(detected_lang)
     if analysis.pos in ("NOUN", "PROPN", "ADJ") and lang_module:
-        parts = lang_module.split_compound(text)
+        parts = lang_module.split_compound(text, analysis.lemma)
         if parts and len(parts) > 1:
             log.info(f"[STEP 1.5] Compound split: {text} → {parts}")
             compound_parts = parts

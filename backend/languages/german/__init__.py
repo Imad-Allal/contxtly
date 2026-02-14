@@ -18,11 +18,31 @@ class German(LanguageModule):
             spacy_model="de_core_news_sm",
         )
 
-    def split_compound(self, word: str) -> list[str] | None:
+    def split_compound(self, word: str, lemma: str | None = None) -> list[str] | None:
         """Split a compound word into parts."""
+        if lemma and lemma.endswith("end"):
+            parts = split_compound(word)
+            if not parts or len(parts) < 2:
+                return None
+            # Check if the last part looks like a valid participle (ends in -end/-ende/-enden/etc)
+            last_part = parts[-1].lower()
+            if not any(last_part.endswith(e) for e in ("end", "ende", "enden", "ender", "endem", "endes")):
+                return None
+            # Check the verb stem (part minus ending) is long enough to be a real verb
+            # e.g., "begleitend" has stem "begleit" (7 chars) = valid
+            # but "Tenden" has stem "T" (1 char) = invalid split
+            for ending in ("enden", "ender", "endem", "endes", "ende", "end"):
+                if last_part.endswith(ending):
+                    stem_len = len(last_part) - len(ending)
+                    break
+            else:
+                stem_len = len(last_part)
+            if stem_len < 3:
+                return None
+            return parts
         return split_compound(word)
 
-    def analyze(self, word: str, token, doc, morph: dict[str, str]) -> LanguageAnalysis | None:
+    def analyze(self, word: str, token, doc, morph: dict[str, str], nlp=None) -> LanguageAnalysis | None:
         """Run all German-specific detections and return a LanguageAnalysis."""
 
         # --- Collocation detection (highest priority) ---
@@ -89,12 +109,11 @@ class German(LanguageModule):
         self, word: str, token, infinitive: str, prefix_ref: TokenRef, morph: dict[str, str]
     ) -> LanguageAnalysis:
         """Build LanguageAnalysis when user selected the verb stem of a separable verb."""
-        lemma = token.lemma_
         selected_text = word
+        prefix_text = prefix_ref.text
 
         def breakdown_fn(analysis, base_translation):
-            prefix = infinitive.replace(lemma, "")
-            conjugated = f"{selected_text} + {prefix}"
+            conjugated = f"{selected_text} + {prefix_text}"
             morph_desc = describe_morphology(morph, include=["Tense", "Person", "Number", "Mood"])
             if morph_desc:
                 return f"{infinitive} ({base_translation}) → {conjugated} ({morph_desc})"

@@ -2,8 +2,63 @@ import { showButton, removeButton, showTooltip, updateTooltip, removeTooltip, is
 import { highlightSelection, getCachedTranslation, removeFromStorage, removeHighlightFromDOM } from "./highlight.js";
 
 const MAX_LENGTH = 500;
-const SENTENCE_END = /[.!?]/;
 const LETTER_OR_NUM = /\p{L}|\p{N}/u;
+
+// Common abbreviations that don't end sentences (lowercase for matching)
+const ABBREVIATIONS = new Set([
+  "dr", "mr", "mrs", "ms", "prof", "sr", "jr", "st", "ave", "blvd",
+  "dept", "est", "vol", "vs", "etc", "inc", "ltd", "co", "corp",
+  "gen", "gov", "sgt", "cpl", "pvt", "capt", "lt", "col", "maj",
+  "rev", "hon", "pres", "govt",
+  // German
+  "bzw", "usw", "evtl", "ggf", "ca", "nr", "tel", "str", "z.b",
+]);
+
+/**
+ * Determines if a period at position `i` in `text` is a true sentence-ending period.
+ * Returns false for abbreviations, decimals, URLs, ellipses, etc.
+ */
+function isSentenceEnd(text, i) {
+  const ch = text[i];
+
+  // ! and ? are always sentence-enders
+  if (ch === "!" || ch === "?") return true;
+  if (ch !== ".") return false;
+
+  // Must be followed by whitespace/end to even consider it a sentence boundary
+  if (i + 1 < text.length && !/\s/.test(text[i + 1])) return false;
+
+  // Ellipsis: "..."
+  if ((i >= 1 && text[i - 1] === ".") || (i + 1 < text.length && text[i + 1] === ".")) return false;
+
+  // Decimal number: digit before and digit after the dot (already caught by no-space check above,
+  // but guard against edge cases like "3. ")
+  if (i >= 1 && /\d/.test(text[i - 1])) {
+    // Look ahead past the space — if next non-space is a digit, likely a decimal split by formatting
+    // But "3. The answer" is a valid sentence end (numbered list), so only reject if next word is a digit
+    const afterSpace = text.slice(i + 1).match(/^\s*(\S)/);
+    if (afterSpace && /\d/.test(afterSpace[1])) return false;
+  }
+
+  // Abbreviation check: grab the word immediately before the period
+  let wordStart = i - 1;
+  while (wordStart >= 0 && /\p{L}/u.test(text[wordStart])) wordStart--;
+  wordStart++;
+  const wordBefore = text.slice(wordStart, i).toLowerCase();
+
+  if (wordBefore.length > 0) {
+    // Single-letter abbreviation (e.g. "A.", "B.", initials) — not a sentence end
+    // unless the next word starts lowercase (which would be unusual after an initial)
+    if (wordBefore.length === 1) {
+      const nextWord = text.slice(i + 1).match(/^\s+(\p{L})/u);
+      if (!nextWord || /\p{Lu}/u.test(nextWord[1])) return false;
+    }
+
+    if (ABBREVIATIONS.has(wordBefore)) return false;
+  }
+
+  return true;
+}
 
 // Trim selection to letters/numbers only
 function trimRange(selection) {
@@ -71,7 +126,7 @@ function findBoundary(text, pos, dir) {
   const start = dir < 0 ? pos - 1 : pos;
 
   for (let i = start; dir < 0 ? i >= 0 : i < text.length; i += step) {
-    if (SENTENCE_END.test(text[i])) {
+    if (isSentenceEnd(text, i)) {
       if (dir < 0 && i + 1 < text.length && /\s/.test(text[i + 1])) return i + 2;
       if (dir > 0) return i + 1;
     }
