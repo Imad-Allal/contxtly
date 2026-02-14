@@ -5,6 +5,7 @@ from languages.base import LanguageConfig, LanguageModule, LanguageAnalysis, des
 from languages.german.compounds import split_compound
 from languages.german.verbs import detect_separable_verb, detect_separable_verb_from_prefix, detect_compound_tense
 from languages.german.collocations import CollocationInfo, detect_verb_preposition_collocation
+from languages.german.adverbials import AdverbialLocutionInfo, detect_adverbial_locution
 
 
 class German(LanguageModule):
@@ -45,7 +46,12 @@ class German(LanguageModule):
     def analyze(self, word: str, token, doc, morph: dict[str, str], nlp=None) -> LanguageAnalysis | None:
         """Run all German-specific detections and return a LanguageAnalysis."""
 
-        # --- Collocation detection (highest priority) ---
+        # --- Adverbial locution detection (highest priority) ---
+        locution = detect_adverbial_locution(word, doc)
+        if locution:
+            return self._analyze_adverbial_locution(word, locution)
+
+        # --- Collocation detection ---
         collocation = detect_verb_preposition_collocation(word, doc)
         if collocation:
             return self._analyze_collocation(word, token, collocation, morph)
@@ -68,6 +74,29 @@ class German(LanguageModule):
             return self._analyze_compound_tense(word, token, compound_tense, morph)
 
         return None
+
+    def _analyze_adverbial_locution(
+        self, word: str, locution: AdverbialLocutionInfo
+    ) -> LanguageAnalysis:
+        """Build LanguageAnalysis for an adverbial locution."""
+        loc_text = locution.locution
+        loc_related = locution.related
+        selected_text = word
+
+        def breakdown_fn(analysis, base_translation):
+            all_parts = [selected_text] + [r.text for r in loc_related]
+            parts_display = " + ".join(all_parts)
+            return f"{loc_text} ({base_translation}) → {parts_display}"
+
+        return LanguageAnalysis(
+            translate=loc_text,
+            lemma=loc_text,
+            word_type="adverbial_locution",
+            related=[TokenRef(r.text, r.offset) for r in loc_related],
+            pattern=loc_text,
+            llm_hint=loc_text,
+            breakdown_fn=breakdown_fn,
+        )
 
     def _analyze_collocation(
         self, word: str, token, collocation: CollocationInfo, morph: dict[str, str]
