@@ -20,7 +20,7 @@ class WordAnalysis:
     pos: str
     morph: dict[str, str]
     lang: str
-    word_type: str  # simple, conjugated_verb, plural_noun, separable_prefix, collocation_verb, collocation_prep, adverbial_locution
+    word_type: str  # simple, conjugated_verb, plural_noun, separable_prefix, collocation_verb, collocation_prep, fixed_expression
     lang_analysis: LanguageAnalysis | None = None
 
 

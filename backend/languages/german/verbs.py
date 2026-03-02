@@ -34,6 +34,9 @@ def detect_separable_verb(word: str, doc: spacy.tokens.Doc) -> tuple[str, TokenR
     if not target_token:
         return None
 
+    if target_token.pos_ not in ("VERB", "AUX"):
+        return None
+
     for token in doc:
         if token.head != target_token:
             continue
@@ -81,8 +84,11 @@ def detect_separable_verb_from_prefix(word: str, doc: spacy.tokens.Doc) -> tuple
         return None
 
     # The head of the particle is the verb stem
-    # Trust PTKVZ tagging even if verb is misclassified (e.g. imperatives tagged as NOUN)
+    # Trust PTKVZ tagging even if verb is misclassified (e.g. imperatives tagged as NOUN),
+    # but only when spaCy explicitly tagged the particle (PTKVZ/svp) — not the heuristic path.
     verb_token = target_token.head
+    if verb_token.pos_ == "NOUN" and not is_particle:
+        return None
     if verb_token.pos_ not in ("VERB", "NOUN", "AUX"):
         return None
 

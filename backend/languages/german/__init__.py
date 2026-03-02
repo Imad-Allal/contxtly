@@ -5,7 +5,8 @@ from languages.base import LanguageConfig, LanguageModule, LanguageAnalysis, des
 from languages.german.compounds import split_compound
 from languages.german.verbs import detect_separable_verb, detect_separable_verb_from_prefix, detect_compound_tense
 from languages.german.collocations import CollocationInfo, detect_verb_preposition_collocation
-from languages.german.adverbials import AdverbialLocutionInfo, detect_adverbial_locution
+from languages.german.expressions import FixedExpressionInfo, detect_fixed_expression
+from languages.german.nomen_verbs import NomenVerbInfo, detect_nomen_verb
 
 
 class German(LanguageModule):
@@ -46,10 +47,15 @@ class German(LanguageModule):
     def analyze(self, word: str, token, doc, morph: dict[str, str], nlp=None) -> LanguageAnalysis | None:
         """Run all German-specific detections and return a LanguageAnalysis."""
 
-        # --- Adverbial locution detection (highest priority) ---
-        locution = detect_adverbial_locution(word, doc)
-        if locution:
-            return self._analyze_adverbial_locution(word, locution)
+        # --- Fixed expression detection (highest priority) ---
+        expression = detect_fixed_expression(word, doc)
+        if expression:
+            return self._analyze_fixed_expression(word, expression)
+
+        # --- Nomen-Verb-Verbindungen detection ---
+        nv = detect_nomen_verb(word, doc)
+        if nv:
+            return self._analyze_fixed_expression(word, nv)
 
         # --- Collocation detection ---
         collocation = detect_verb_preposition_collocation(word, doc)
@@ -75,26 +81,26 @@ class German(LanguageModule):
 
         return None
 
-    def _analyze_adverbial_locution(
-        self, word: str, locution: AdverbialLocutionInfo
+    def _analyze_fixed_expression(
+        self, word: str, expr: FixedExpressionInfo
     ) -> LanguageAnalysis:
-        """Build LanguageAnalysis for an adverbial locution."""
-        loc_text = locution.locution
-        loc_related = locution.related
+        """Build LanguageAnalysis for a fixed expression."""
+        expr_text = expr.expression
+        expr_related = expr.related
         selected_text = word
 
         def breakdown_fn(analysis, base_translation):
-            all_parts = [selected_text] + [r.text for r in loc_related]
+            all_parts = [selected_text] + [r.text for r in expr_related]
             parts_display = " + ".join(all_parts)
-            return f"{loc_text} ({base_translation}) → {parts_display}"
+            return f"{expr_text} ({base_translation}) → {parts_display}"
 
         return LanguageAnalysis(
-            translate=loc_text,
-            lemma=loc_text,
-            word_type="adverbial_locution",
-            related=[TokenRef(r.text, r.offset) for r in loc_related],
-            pattern=loc_text,
-            llm_hint=loc_text,
+            translate=expr_text,
+            lemma=expr_text,
+            word_type="fixed_expression",
+            related=[TokenRef(r.text, r.offset) for r in expr_related],
+            pattern=expr_text,
+            llm_hint=expr_text,
             breakdown_fn=breakdown_fn,
         )
 
