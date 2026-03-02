@@ -12,6 +12,8 @@ const els = {
   wordCount: $("#wordCount"),
   settingsToggle: $(".settings-toggle"),
   settingsPanel: $(".settings-panel"),
+  ankiExportBtn: $("#ankiExport"),
+  ankiStatus: $("#ankiStatus"),
 };
 
 let words = [];
@@ -221,6 +223,45 @@ function formatTranslation(data) {
   return "";
 }
 
+async function exportToAnki() {
+  els.ankiExportBtn.disabled = true;
+  els.ankiExportBtn.classList.add("loading");
+  showAnkiStatus("", false);
+
+  try {
+    const res = await chrome.runtime.sendMessage({ action: "exportToAnki" });
+
+    if (res.error) {
+      showAnkiStatus("Anki not running. Open Anki with AnkiConnect.", true);
+    } else if (res.empty) {
+      showAnkiStatus("No words to export.", false);
+    } else {
+      const parts = [];
+      if (res.added) parts.push(`${res.added} added`);
+      if (res.duplicates) parts.push(`${res.duplicates} already in Anki`);
+      showAnkiStatus(`✓ ${parts.join(", ")}`, false);
+    }
+  } catch {
+    showAnkiStatus("Anki not running. Open Anki with AnkiConnect.", true);
+  } finally {
+    els.ankiExportBtn.disabled = false;
+    els.ankiExportBtn.classList.remove("loading");
+  }
+}
+
+let ankiStatusTimer = null;
+function showAnkiStatus(msg, isError) {
+  clearTimeout(ankiStatusTimer);
+  const el = els.ankiStatus;
+  el.textContent = msg;
+  el.className = `anki-status${isError ? " anki-status-error" : ""}${msg ? "" : " hidden"}`;
+  if (msg) {
+    ankiStatusTimer = setTimeout(() => {
+      el.className = "anki-status hidden";
+    }, 4000);
+  }
+}
+
 // Events
 els.settingsToggle.onclick = () => els.settingsPanel.classList.toggle("hidden");
 els.targetLang.onchange = saveSettings;
@@ -228,6 +269,7 @@ els.mode.onchange = saveSettings;
 els.search.oninput = render;
 els.deleteBtn.onclick = deleteSelected;
 els.selectAllBtn.onclick = toggleSelectAll;
+els.ankiExportBtn.onclick = exportToAnki;
 
 // Init
 loadSettings();

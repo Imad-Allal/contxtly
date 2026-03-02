@@ -1,11 +1,16 @@
-"""German adverbial locutions dictionary (A1–C2).
+"""German fixed expressions dictionary (A1–C2).
 
-Maps a tuple of words (in order) to the canonical locution string.
-The ADVERBIAL_INDEX reverse-index is auto-built at import time.
+Adverbial locutions, prepositional phrases, and fixed idioms.
+Maps a tuple of consecutive words (in order) to the canonical expression string.
+The EXPRESSION_INDEX reverse-index is auto-built at import time.
 """
 
-# (word1, word2, ...) → canonical locution string
-ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
+# (word1, word2, ...) → canonical expression string
+FIXED_EXPRESSIONS: dict[tuple[str, ...], str] = {
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # ADVERBIAL LOCUTIONS
+    # ═══════════════════════════════════════════════════════════════════════
 
     # ── Preference / Manner ──────────────────────────────────────────────
     ("am", "liebsten"): "am liebsten",
@@ -160,8 +165,6 @@ ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
     ("zum", "letzten", "Mal"): "zum letzten Mal",
     ("zum", "Wohl"): "zum Wohl",
     ("zum", "Trotz"): "zum Trotz",
-    ("zum", "Ausdruck"): "zum Ausdruck",
-    ("zum", "Vorschein"): "zum Vorschein",
     ("um", "so", "mehr"): "um so mehr",
     ("um", "so", "weniger"): "um so weniger",
     ("um", "so", "besser"): "um so besser",
@@ -174,10 +177,8 @@ ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
     ("je", "nachdem"): "je nachdem",
     ("im", "Falle"): "im Falle",
     ("im", "Notfall"): "im Notfall",
-    ("auf", "jeden", "Fall"): "auf jeden Fall",  # repeated from Preference, same entry
     ("trotz", "allem"): "trotz allem",
     ("trotz", "alledem"): "trotz alledem",
-    ("nichtsdestotrotz",): "nichtsdestotrotz",
     ("um", "so", "schlimmer"): "um so schlimmer",
 
     # ── Communication / Opinion ──────────────────────────────────────────
@@ -196,7 +197,6 @@ ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
     ("ohne", "Weiteres"): "ohne Weiteres",
     ("in", "Ordnung"): "in Ordnung",
     ("in", "Wirklichkeit"): "in Wirklichkeit",
-    ("in", "der", "Tat"): "in der Tat",
     ("im", "Ernst"): "im Ernst",
     ("im", "Vergleich", "zu"): "im Vergleich zu",
     ("im", "Gegensatz", "zu"): "im Gegensatz zu",
@@ -227,7 +227,6 @@ ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
     ("immer", "noch"): "immer noch",
     ("immer", "mehr"): "immer mehr",
     ("immer", "weniger"): "immer weniger",
-    ("nach", "wie", "vor"): "nach wie vor",
 
     # ── Consequence / Result ─────────────────────────────────────────────
     ("letzten", "Endes"): "letzten Endes",
@@ -236,7 +235,6 @@ ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
     ("kurz", "und", "bündig"): "kurz und bündig",
     ("kurz", "um"): "kurz um",
     ("alles", "in", "allem"): "alles in allem",
-    ("im", "Nachhinein"): "im Nachhinein",
     ("zu", "guter", "Letzt"): "zu guter Letzt",
     ("am", "Ende"): "am Ende",
     ("am", "Anfang"): "am Anfang",
@@ -246,7 +244,7 @@ ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
     ("am", "ehesten"): "am ehesten",
     ("am", "schlimmsten"): "am schlimmsten",
 
-    # ── Idioms / Fixed expressions (common in everyday German) ───────────
+    # ── Idioms / Fixed adverbial expressions ─────────────────────────────
     ("Gott", "sei", "Dank"): "Gott sei Dank",
     ("Hals", "über", "Kopf"): "Hals über Kopf",
     ("Hand", "in", "Hand"): "Hand in Hand",
@@ -266,25 +264,13 @@ ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
     ("unter", "Druck"): "unter Druck",
     ("unter", "Kontrolle"): "unter Kontrolle",
     ("unter", "der", "Bedingung"): "unter der Bedingung",
-    ("unter", "Umständen"): "unter Umständen",
     ("unter", "anderem"): "unter anderem",
     ("unter", "vier", "Augen"): "unter vier Augen",
     ("vor", "Ort"): "vor Ort",
-    ("vor", "allem"): "vor allem",
-    ("vor", "kurzem"): "vor kurzem",
-    ("auf", "Anhieb"): "auf Anhieb",
-    ("bei", "Bedarf"): "bei Bedarf",
-    ("bei", "weitem"): "bei weitem",
     ("in", "Kürze"): "in Kürze",
     ("in", "Ruhe"): "in Ruhe",
     ("in", "Eile"): "in Eile",
     ("in", "der", "Lage"): "in der Lage",
-    ("in", "Betracht"): "in Betracht",
-    ("in", "Frage"): "in Frage",
-    ("in", "Gang"): "in Gang",
-    ("in", "Kraft"): "in Kraft",
-    ("in", "Anspruch"): "in Anspruch",
-    ("in", "Kauf"): "in Kauf",
     ("auf", "dem", "Laufenden"): "auf dem Laufenden",
     ("auf", "dem", "neuesten", "Stand"): "auf dem neuesten Stand",
     ("auf", "eigene", "Faust"): "auf eigene Faust",
@@ -298,7 +284,6 @@ ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
     ("an", "der", "Reihe"): "an der Reihe",
     ("mit", "Hilfe"): "mit Hilfe",
     ("mit", "freundlichen", "Grüßen"): "mit freundlichen Grüßen",
-    ("mit", "anderen", "Worten"): "mit anderen Worten",
     ("mit", "gutem", "Gewissen"): "mit gutem Gewissen",
     ("mit", "vollem", "Recht"): "mit vollem Recht",
     ("nicht", "im", "Geringsten"): "nicht im Geringsten",
@@ -314,7 +299,6 @@ ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
     ("im", "Einklang", "mit"): "im Einklang mit",
     ("im", "Zuge"): "im Zuge",
     ("im", "Sinne"): "im Sinne",
-    ("im", "Hinblick", "auf"): "im Hinblick auf",
     ("im", "Gegenzug"): "im Gegenzug",
     ("im", "Vertrauen"): "im Vertrauen",
     ("im", "Stillen"): "im Stillen",
@@ -326,21 +310,12 @@ ADVERBIAL_LOCUTIONS: dict[tuple[str, ...], str] = {
     ("zu", "Unrecht"): "zu Unrecht",
     ("zu", "Gunsten"): "zu Gunsten",
     ("zu", "Lasten"): "zu Lasten",
-    ("zum", "Ausdruck", "bringen"): "zum Ausdruck bringen",
-    ("zum", "Vorschein", "kommen"): "zum Vorschein kommen",
-    ("in", "Angriff", "nehmen"): "in Angriff nehmen",
-    ("in", "Betracht", "ziehen"): "in Betracht ziehen",
-    ("in", "Frage", "kommen"): "in Frage kommen",
-    ("in", "Frage", "stellen"): "in Frage stellen",
-    ("in", "Gang", "setzen"): "in Gang setzen",
-    ("in", "Kraft", "treten"): "in Kraft treten",
-    ("in", "Kauf", "nehmen"): "in Kauf nehmen",
-    ("in", "Anspruch", "nehmen"): "in Anspruch nehmen",
+
 }
 
 
-# ── Reverse index: word (lowercased) → list of locution tuples ──────────
-ADVERBIAL_INDEX: dict[str, list[tuple[str, ...]]] = {}
-for _locution_tuple in ADVERBIAL_LOCUTIONS:
-    for _word in _locution_tuple:
-        ADVERBIAL_INDEX.setdefault(_word.lower(), []).append(_locution_tuple)
+# ── Reverse index: word (lowercased) → list of expression tuples ────────
+EXPRESSION_INDEX: dict[str, list[tuple[str, ...]]] = {}
+for _expr_tuple in FIXED_EXPRESSIONS:
+    for _word in _expr_tuple:
+        EXPRESSION_INDEX.setdefault(_word.lower(), []).append(_expr_tuple)

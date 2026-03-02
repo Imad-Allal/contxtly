@@ -1,30 +1,30 @@
-"""German adverbial locution detection."""
+"""German fixed expression detection (adverbial locutions + Nomen-Verb-Verbindungen)."""
 
 from dataclasses import dataclass
 
 import spacy
 from models import TokenRef
-from languages.german.adverbial_data import ADVERBIAL_INDEX
+from languages.german.expression_data import EXPRESSION_INDEX
 
 
 @dataclass
-class AdverbialLocutionInfo:
-    """Detected adverbial locution (e.g., "auf jeden Fall")."""
-    locution: str           # canonical form: "auf jeden Fall"
+class FixedExpressionInfo:
+    """Detected fixed expression (e.g., "auf jeden Fall", "eine Frage stellen")."""
+    expression: str         # canonical form: "auf jeden Fall"
     related: list[TokenRef] # all parts except the selected word
 
 
-def detect_adverbial_locution(
+def detect_fixed_expression(
     word: str, doc: spacy.tokens.Doc
-) -> AdverbialLocutionInfo | None:
-    """Detect adverbial locutions from context.
+) -> FixedExpressionInfo | None:
+    """Detect fixed expressions from context.
 
     Looks up the selected word in the reverse index, then checks if any
-    candidate locution matches a contiguous sequence of tokens in the doc.
+    candidate expression matches a contiguous sequence of tokens in the doc.
     Returns the longest match.
     """
     word_lower = word.lower()
-    candidates = ADVERBIAL_INDEX.get(word_lower)
+    candidates = EXPRESSION_INDEX.get(word_lower)
     if not candidates:
         return None
 
@@ -32,11 +32,11 @@ def detect_adverbial_locution(
     doc_tokens = [(t.text, t.idx) for t in doc]
     doc_lower = [t.text.lower() for t in doc]
 
-    best: AdverbialLocutionInfo | None = None
+    best: FixedExpressionInfo | None = None
 
     for candidate in candidates:
         match = _find_contiguous_match(candidate, doc_tokens, doc_lower, word_lower)
-        if match and (best is None or len(candidate) > len(best.locution.split())):
+        if match and (best is None or len(candidate) > len(best.expression.split())):
             best = match
 
     return best
@@ -47,10 +47,10 @@ def _find_contiguous_match(
     doc_tokens: list[tuple[str, int]],
     doc_lower: list[str],
     selected_word: str,
-) -> AdverbialLocutionInfo | None:
+) -> FixedExpressionInfo | None:
     """Try to find a contiguous token sequence matching the candidate tuple.
 
-    Returns AdverbialLocutionInfo if found and the selected word is part of it.
+    Returns FixedExpressionInfo if found and the selected word is part of it.
     """
     candidate_lower = [w.lower() for w in candidate]
     cand_len = len(candidate_lower)
@@ -66,7 +66,7 @@ def _find_contiguous_match(
                 continue
 
             # Build related list (all parts except the selected word — first occurrence only)
-            locution = " ".join(text for text, _ in matched_tokens)
+            expression = " ".join(text for text, _ in matched_tokens)
             related = []
             selected_found = False
             for text, offset in matched_tokens:
@@ -75,6 +75,6 @@ def _find_contiguous_match(
                     continue
                 related.append(TokenRef(text, offset))
 
-            return AdverbialLocutionInfo(locution=locution, related=related)
+            return FixedExpressionInfo(expression=expression, related=related)
 
     return None
