@@ -106,13 +106,15 @@ def detect_separable_verb_from_prefix(word: str, doc: spacy.tokens.Doc) -> tuple
 
 
 # German compound tense patterns
+# Note: ("werden", "Pres", "Part") is handled separately in detect_compound_tense()
+# because it is ambiguous between Vorgangspassiv Präsens and Futur II.
 GERMAN_COMPOUND_TENSES = {
     ("haben", "Pres", "Part"): "Perfekt (present perfect)",
     ("sein", "Pres", "Part"): "Perfekt (present perfect)",
     ("haben", "Past", "Part"): "Plusquamperfekt (past perfect)",
     ("sein", "Past", "Part"): "Plusquamperfekt (past perfect)",
     ("werden", "Pres", "Inf"): "Futur I (future)",
-    ("werden", "Pres", "Part"): "Futur II (future perfect)",
+    ("werden", "Past", "Part"): "Vorgangspassiv Präteritum (past passive)",
     ("werden", "Sub", "Inf"): "Konjunktiv II (subjunctive)",
 }
 
@@ -165,4 +167,16 @@ def detect_compound_tense(target_word: str, doc: spacy.tokens.Doc) -> str | None
     main_form = main_morph.get("VerbForm", "")
 
     key = (aux_lemma, aux_tense, main_form)
+
+    # Disambiguate: werden (Pres) + Partizip II is either present passive or Futur II.
+    # Futur II requires a second auxiliary (haben/sein) also linked to the main verb;
+    # present passive has only werden.
+    if key == ("werden", "Pres", "Part"):
+        has_second_aux = any(
+            token.lemma_ in {"haben", "sein"}
+            and _are_syntactically_related(token, main_verb)
+            for token in doc
+        )
+        return "Futur II (future perfect)" if has_second_aux else "Vorgangspassiv Präsens (present passive)"
+
     return GERMAN_COMPOUND_TENSES.get(key)

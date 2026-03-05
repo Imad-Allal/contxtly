@@ -71,10 +71,11 @@ def describe_morphology(morph_dict: dict[str, str], include: list[str] | None = 
     """
     descriptions = []
 
-    for key, value in morph_dict.items():
-        if include and key not in include:
+    keys = include if include else list(morph_dict.keys())
+    for key in keys:
+        value = morph_dict.get(key)
+        if value is None:
             continue
-
         label = f"{key}={value}"
         if label in UNIVERSAL_MORPH_LABELS:
             descriptions.append(UNIVERSAL_MORPH_LABELS[label])
@@ -119,7 +120,7 @@ class LanguageModule(ABC):
         """Classify a noun. Override for language-specific logic."""
         if morph.get("Number") == "Plur":
             return "plural_noun"
-        return "simple"
+        return "noun"
 
     def split_compound(self, word: str, lemma: str | None = None) -> list[str] | None:
         """Split a compound word. Override for language-specific logic."""

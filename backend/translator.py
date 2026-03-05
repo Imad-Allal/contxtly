@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from groq import Groq
+from groq import Groq, InternalServerError
 
 from config import settings
 from timing import record_timing
@@ -11,38 +11,51 @@ log = logging.getLogger(__name__)
 client = Groq(api_key=settings.groq_api_key)
 
 # Models
-SIMPLE_MODEL = "llama-3.1-8b-instant"
-SMART_MODEL = "llama-3.3-70b-versatile"
+PRIMARY_MODEL = "moonshotai/kimi-k2-instruct"
+FALLBACK_MODEL = "llama-3.3-70b-versatile"
 
 
-def llm_call(prompt: str, model: str = SMART_MODEL, json_mode: bool = True) -> dict | str:
-    """Make an LLM call with optional JSON mode."""
+def llm_call(prompt: str, model: str = PRIMARY_MODEL, json_mode: bool = True) -> dict | str:
+    """Make an LLM call with optional JSON mode. Falls back to FALLBACK_MODEL on 503."""
     log.debug(f"[LLM] Calling {model}, json_mode={json_mode}")
     log.debug(f"[LLM] Prompt: {prompt[:100]}...")
 
-    start = time.perf_counter()
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        response_format={"type": "json_object"} if json_mode else None,
-        temperature=0.2,
-        max_tokens=500,
-    )
-    elapsed_ms = (time.perf_counter() - start) * 1000
-    record_timing(f"LLM API call ({model})", elapsed_ms)
-    content = response.choices[0].message.content.strip()
-    log.debug(f"[LLM] Raw response: {content[:200]}...")
+    models_to_try = [model, FALLBACK_MODEL] if model != FALLBACK_MODEL else [model]
 
-    if json_mode:
+    for attempt_model in models_to_try:
         try:
-            parsed = json.loads(content)
-            log.debug(f"[LLM] Parsed JSON: {parsed}")
-            return parsed
-        except json.JSONDecodeError as e:
-            log.error(f"[LLM] JSON parse error: {e}")
-            return {"error": "Invalid JSON response", "raw": content}
+            start = time.perf_counter()
+            response = client.chat.completions.create(
+                model=attempt_model,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"} if json_mode else None,
+                temperature=0.2,
+                max_tokens=500,
+            )
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            record_timing(f"LLM API call ({attempt_model})", elapsed_ms)
+            content = response.choices[0].message.content.strip()
+            log.debug(f"[LLM] Raw response: {content[:200]}...")
 
-    return content
+            if json_mode:
+                try:
+                    parsed = json.loads(content)
+                    log.debug(f"[LLM] Parsed JSON: {parsed}")
+                    return parsed
+                except json.JSONDecodeError as e:
+                    log.error(f"[LLM] JSON parse error: {e}")
+                    return {"error": "Invalid JSON response", "raw": content}
+
+            return content
+
+        except InternalServerError as e:
+            if attempt_model != FALLBACK_MODEL:
+                log.warning(f"[LLM] {attempt_model} unavailable (503), falling back to {FALLBACK_MODEL}")
+            else:
+                log.error(f"[LLM] Fallback model also failed: {e}")
+                raise
+
+    raise RuntimeError("All models failed")
 
 
 def translate_smart(
@@ -97,7 +110,7 @@ The context_translation MUST also use this idiomatic equivalent, not a literal r
 
     lemma_instruction = ""
     if lemma and lemma != word:
-        lemma_instruction = f'\nAlso translate the base form "{lemma}" separately.'
+        lemma_instruction = f'\nAlso translate the base form (infinitive) "{lemma}" separately. Give the correct, natural dictionary translation — not a transliteration or invented word.'
 
     compound_instruction = ""
     if compound_parts:
@@ -119,7 +132,7 @@ Return JSON with:
 
 Return ONLY valid JSON."""
 
-    result = llm_call(prompt, model=SMART_MODEL)
+    result = llm_call(prompt, model=PRIMARY_MODEL)
 
     if isinstance(result, dict):
         # Parse compound parts: (original_part, base_form, translation)
@@ -163,6 +176,6 @@ Return JSON with:
 
 Return ONLY valid JSON."""
 
-    result = llm_call(prompt, model=SIMPLE_MODEL)
+    result = llm_call(prompt, model=PRIMARY_MODEL)
     log.info(f"[TRANSLATE] Simple result: '{result}'")
     return result

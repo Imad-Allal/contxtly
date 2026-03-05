@@ -1,6 +1,5 @@
 import logging
 import traceback
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +7,6 @@ from pydantic import BaseModel
 
 from analyzer import preload_models
 from pipeline import translate_pipeline
-from cache import cache
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +16,9 @@ logging.basicConfig(
 )
 
 log = logging.getLogger(__name__)
+
+
+from contextlib import asynccontextmanager
 
 
 @asynccontextmanager
@@ -69,10 +70,12 @@ def health():
 
 @app.get("/cache/stats")
 def cache_stats():
+    from cache import cache
     return cache.stats()
 
 
 @app.post("/cache/clear")
 def cache_clear():
+    from cache import cache
     cache.clear()
     return {"status": "cleared"}

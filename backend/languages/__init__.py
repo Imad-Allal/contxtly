@@ -7,8 +7,8 @@ from languages.english import English
 # Registry of all supported languages
 _LANGUAGES: dict[str, LanguageModule] = {
     "de": German(),
-    "fr": French(),
-    "en": English(),
+    # "fr": French(),
+    # "en": English(),
 }
 
 
