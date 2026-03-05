@@ -17,7 +17,7 @@ class German(LanguageModule):
         return LanguageConfig(
             code="de",
             name="German",
-            spacy_model="de_core_news_sm",
+            spacy_model="de_dep_news_trf",
         )
 
     def split_compound(self, word: str, lemma: str | None = None) -> list[str] | None:

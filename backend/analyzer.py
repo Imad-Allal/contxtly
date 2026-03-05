@@ -106,6 +106,7 @@ def classify_word_type(token, lang: str) -> str:
         # Fallback for unsupported languages
         if morph.get("Number") == "Plur":
             return "plural_noun"
+        return "noun"
 
     return "simple"
 
