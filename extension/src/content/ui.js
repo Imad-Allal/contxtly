@@ -7,7 +7,34 @@ const ICONS = {
   </svg>`,
 };
 
-// Helpers
+// ── Type system ──────────────────────────────────────────────────────────────
+
+const TYPE_INFO = {
+  conjugated_verb:  { cls: "contxtly-verb",        label: "Verb" },
+  separable_prefix: { cls: "contxtly-verb",        label: "Sep. Verb" },
+  collocation_verb: { cls: "contxtly-collocation", label: "Collocation" },
+  collocation_prep: { cls: "contxtly-collocation", label: "Collocation" },
+  noun:             { cls: "contxtly-noun",        label: "Noun" },
+  plural_noun:      { cls: "contxtly-noun",        label: "Noun" },
+  fixed_expression: { cls: "contxtly-expression",  label: "Expression" },
+  compound:         { cls: "contxtly-compound",    label: "Compound" },
+};
+
+function getTypeInfo(translation) {
+  if (!translation || typeof translation !== "object") return null;
+  // Use explicit word_type first
+  if (translation.word_type && TYPE_INFO[translation.word_type]) {
+    return TYPE_INFO[translation.word_type];
+  }
+  // Fallback inference from available fields
+  if (translation.collocation_pattern) {
+    return TYPE_INFO.collocation_verb;
+  }
+  return null;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
 function clamp(x, y, w, h) {
   return {
     x: Math.max(10, Math.min(x, window.innerWidth - w - 10)),
@@ -24,27 +51,28 @@ function escapeHtml(text) {
 function isSimpleTranslation(data) {
   if (typeof data === "string") return true;
   if (typeof data === "object" && data !== null) {
-    // Simple if only has translation field (no meaning, breakdown, or context_translation)
     return data.translation && !data.meaning && !data.breakdown && !data.context_translation;
   }
   return false;
 }
 
 function formatTranslation(data) {
-  // Handle string (simple translation)
   if (typeof data === "string") {
     return `<div class="contxtly-simple-translation">${escapeHtml(data)}</div>`;
   }
 
-  // Handle JSON object
   if (typeof data === "object" && data !== null) {
-    // Simple translation - object with only translation field
     if (isSimpleTranslation(data)) {
       return `<div class="contxtly-simple-translation">${escapeHtml(data.translation)}</div>`;
     }
 
-    // Smart translation - multiple fields
     let html = "";
+
+    // Type badge
+    const info = getTypeInfo(data);
+    if (info) {
+      html += `<div class="contxtly-type-badge ${info.cls}-badge">${info.label}</div>`;
+    }
 
     if (data.translation) {
       html += `<div class="contxtly-section contxtly-translation">${escapeHtml(data.translation)}</div>`;
@@ -76,7 +104,13 @@ function setPosition(el, x, y, w, h) {
   el.style.top = `${pos.y + scrollY}px`;
 }
 
-// Button
+function buildTypeClasses(content) {
+  const info = getTypeInfo(typeof content === "object" ? content : null);
+  return info ? ` ${info.cls}` : "";
+}
+
+// ── Button ───────────────────────────────────────────────────────────────────
+
 export function showButton(x, y, onClick) {
   removeButton();
   button = document.createElement("button");
@@ -98,12 +132,13 @@ export function removeButton() {
   button = null;
 }
 
-// Tooltip
+// ── Tooltip ──────────────────────────────────────────────────────────────────
+
 export function showTooltip(x, y) {
   removeTooltip();
   tooltip = document.createElement("div");
   tooltip.className = "contxtly-tooltip contxtly-tooltip-loading";
-  tooltip.textContent = "Translating...";
+  tooltip.textContent = "Translating…";
   setPosition(tooltip, x, y, 320, 100);
   document.body.appendChild(tooltip);
 }
@@ -111,10 +146,10 @@ export function showTooltip(x, y) {
 export function updateTooltip(content, isError = false, onDelete = null) {
   if (!tooltip) return;
   const simpleClass = isSimpleTranslation(content) ? " contxtly-tooltip-simple" : "";
-  tooltip.className = `contxtly-tooltip${isError ? " contxtly-tooltip-error" : ""}${simpleClass}`;
+  const typeClass = buildTypeClasses(content);
+  tooltip.className = `contxtly-tooltip${isError ? " contxtly-tooltip-error" : ""}${simpleClass}${typeClass}`;
   tooltip.innerHTML = isError ? escapeHtml(content) : formatTranslation(content);
 
-  // Add delete button if onDelete callback is provided
   if (!isError && onDelete) {
     const btn = document.createElement("button");
     btn.className = "contxtly-tooltip-delete";
@@ -137,7 +172,8 @@ export function showTranslationTooltip(x, y, content, onDelete) {
   removeTooltip();
   tooltip = document.createElement("div");
   const simpleClass = isSimpleTranslation(content) ? " contxtly-tooltip-simple" : "";
-  tooltip.className = `contxtly-tooltip${simpleClass}`;
+  const typeClass = buildTypeClasses(content);
+  tooltip.className = `contxtly-tooltip${simpleClass}${typeClass}`;
   tooltip.innerHTML = formatTranslation(content);
 
   if (onDelete) {
@@ -158,4 +194,42 @@ export function showTranslationTooltip(x, y, content, onDelete) {
 
 export function isOwnElement(el) {
   return button?.contains(el) || tooltip?.contains(el) || el.classList?.contains("contxtly-highlight");
+}
+
+// ── Mark factory (used by highlight.js) ─────────────────────────────────────
+
+const HIGHLIGHT_COLORS = {
+  "":                     { bg: "rgba(254,249,195,0.55)", bgHover: "rgba(254,249,195,0.85)", shadow: "inset 0 -2px 0 rgba(234,179,8,0.55)",    shadowHover: "inset 0 -2px 0 rgba(234,179,8,0.85)" },
+  "contxtly-verb":        { bg: "rgba(219,234,254,0.45)", bgHover: "rgba(219,234,254,0.75)", shadow: "inset 0 -2px 0 rgba(96,165,250,0.55)",   shadowHover: "inset 0 -2px 0 rgba(96,165,250,0.85)" },
+  "contxtly-noun":        { bg: "rgba(237,233,254,0.45)", bgHover: "rgba(237,233,254,0.75)", shadow: "inset 0 -2px 0 rgba(167,139,250,0.55)",  shadowHover: "inset 0 -2px 0 rgba(167,139,250,0.85)" },
+  "contxtly-collocation": { bg: "rgba(187,0,81,0.1)",     bgHover: "rgba(187,0,81,0.18)",   shadow: "inset 0 -2px 0 rgba(187,0,81,0.55)",     shadowHover: "inset 0 -2px 0 rgba(187,0,81,0.85)" },
+  "contxtly-expression":  { bg: "rgba(255,228,230,0.45)", bgHover: "rgba(255,228,230,0.75)", shadow: "inset 0 -2px 0 rgba(251,113,133,0.55)",  shadowHover: "inset 0 -2px 0 rgba(251,113,133,0.85)" },
+  "contxtly-compound":    { bg: "rgba(209,250,229,0.45)", bgHover: "rgba(209,250,229,0.75)", shadow: "inset 0 -2px 0 rgba(52,211,153,0.55)",   shadowHover: "inset 0 -2px 0 rgba(52,211,153,0.85)" },
+};
+
+export function getHighlightTypeClass(translation) {
+  const info = getTypeInfo(typeof translation === "object" ? translation : null);
+  return info ? info.cls : "";
+}
+
+export function applyHighlightStyle(el, typeClass) {
+  const c = HIGHLIGHT_COLORS[typeClass || ""] || HIGHLIGHT_COLORS[""];
+  // Inline styles override page CSS and UA stylesheet on <mark> elements
+  el.style.background = c.bg;
+  el.style.boxShadow = c.shadow;
+  el.style.borderRadius = "3px";
+  el.style.padding = "0 2px 1px";
+  el.style.cursor = "pointer";
+  el.style.webkitBoxDecorationBreak = "clone";
+  el.style.boxDecorationBreak = "clone";
+  el.style.color = "inherit";
+  // Hover via JS events (inline styles block CSS :hover)
+  el.addEventListener("mouseenter", () => {
+    el.style.background = c.bgHover;
+    el.style.boxShadow = c.shadowHover;
+  });
+  el.addEventListener("mouseleave", () => {
+    el.style.background = c.bg;
+    el.style.boxShadow = c.shadow;
+  });
 }

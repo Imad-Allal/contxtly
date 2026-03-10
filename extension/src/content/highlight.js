@@ -1,4 +1,4 @@
-import { showTranslationTooltip, removeTooltip } from "./ui.js";
+import { showTranslationTooltip, removeTooltip, getHighlightTypeClass, applyHighlightStyle } from "./ui.js";
 
 const CLASS = "contxtly-highlight";
 const SKIP = `.${CLASS}, .contxtly-btn, .contxtly-tooltip`;
@@ -65,7 +65,9 @@ function createDeleteHandler(lemma) {
 
 function createMark(translation, text) {
   const mark = document.createElement("mark");
-  mark.className = CLASS;
+  const typeClass = getHighlightTypeClass(translation);
+  mark.className = typeClass ? `${CLASS} ${typeClass}` : CLASS;
+  applyHighlightStyle(mark, typeClass);
   // Store as JSON string for dataset
   mark.dataset.translation = typeof translation === "object" ? JSON.stringify(translation) : translation;
 
