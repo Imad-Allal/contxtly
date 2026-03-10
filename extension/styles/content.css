@@ -1,65 +1,100 @@
+/* ── Translate button ─────────────────────────────────────────────────────── */
+
 .contxtly-btn {
   position: absolute;
-  z-index: 9999;
-  background: #4f46e5;
-  color: white;
+  z-index: 2147483647;
+  background: #1e293b;
+  color: #f1f5f9;
   border: none;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 13px;
+  border-radius: 7px;
+  padding: 6px 13px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.1);
+  will-change: transform, box-shadow;
+  transition:
+    background 0.3s ease-out,
+    box-shadow 0.35s ease-out,
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
 }
 
 .contxtly-btn:hover {
-  background: #4338ca;
+  background: #334155;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22), 0 3px 6px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
 }
+
+.contxtly-btn:active {
+  transform: translateY(0px) scale(0.97);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* ── Tooltip container ────────────────────────────────────────────────────── */
 
 .contxtly-tooltip {
   position: absolute;
-  z-index: 9999;
-  background: white;
-  color: #000;
-  border-radius: 8px;
-  padding: 12px;
-  max-width: 320px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  z-index: 2147483647;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 12px;
+  padding: 14px;
+  max-width: 300px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.05);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #0f172a;
 }
 
-.contxtly-tooltip-loading {
-  color: #141414;
-}
-
-/* Simple translation tooltip - compact inline style */
+/* Simple translation — compact inline pill */
 .contxtly-tooltip-simple {
-  padding: 8px 8px 8px 12px;
+  padding: 8px 10px 8px 14px;
   max-width: none;
   width: auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  border-radius: 10px;
 }
 
-.contxtly-simple-translation {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1f2937;
-  white-space: nowrap;
-}
-
-.contxtly-tooltip.contxtly-tooltip-simple .contxtly-tooltip-delete {
-  position: static;
-  top: auto;
-  right: auto;
-  flex-shrink: 0;
+.contxtly-tooltip-loading {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 12px;
 }
 
 .contxtly-tooltip-error {
   color: #dc2626;
+  font-size: 12px;
 }
+
+/* ── Type badge ───────────────────────────────────────────────────────────── */
+
+.contxtly-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 9px;
+  border: 1px solid transparent;
+}
+
+.contxtly-verb-badge        { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.contxtly-noun-badge        { background: #f5f3ff; color: #5b21b6; border-color: #ddd6fe; }
+.contxtly-collocation-badge { background: #fff0f6; color: #bb0051; border-color: #f9a8c9; }
+.contxtly-expression-badge  { background: #fff1f2; color: #9d174d; border-color: #fecdd3; }
+.contxtly-compound-badge    { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+
+/* ── Translation sections ─────────────────────────────────────────────────── */
 
 .contxtly-section {
   margin-bottom: 8px;
@@ -69,79 +104,200 @@
   margin-bottom: 0;
 }
 
+/* Main translation */
 .contxtly-translation {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
   padding-right: 28px;
 }
 
+/* Meaning */
 .contxtly-meaning {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.contxtly-breakdown {
   font-size: 12px;
-  color: #4f46e5;
-  background: #f0f0ff;
-  padding: 6px 8px;
-  border-radius: 4px;
-  font-family: monospace;
+  color: #64748b;
+  line-height: 1.6;
 }
 
+/* Breakdown — default (slate) */
+.contxtly-breakdown {
+  font-size: 11px;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  line-height: 1.5;
+}
+
+/* Breakdown — verb (blue) */
+.contxtly-verb .contxtly-breakdown {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+/* Breakdown — noun (violet) */
+.contxtly-noun .contxtly-breakdown {
+  color: #5b21b6;
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+}
+
+/* Breakdown — collocation */
+.contxtly-collocation .contxtly-breakdown {
+  color: #bb0051;
+  background: #fff0f6;
+  border-color: #f9a8c9;
+}
+
+/* Breakdown — expression (rose) */
+.contxtly-expression .contxtly-breakdown {
+  color: #9d174d;
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+/* Breakdown — compound (emerald) */
+.contxtly-compound .contxtly-breakdown {
+  color: #065f46;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+/* Context translation */
 .contxtly-context-translation {
-  font-size: 13px;
-  border-top: 1px solid #e5e7eb;
+  font-size: 12px;
+  border-top: 1px solid #f1f5f9;
   padding-top: 8px;
-  margin-top: 4px;
-}
-
-.contxtly-context-translation-source {
-  color: #374151;
-  font-style: italic;
-}
-
-.contxtly-context-translation-translation {
-  color: #6b7280;
   margin-top: 2px;
 }
 
-/* Highlight for translated words */
-.contxtly-highlight {
-  background: #fef08a;
-  border-radius: 3px;
-  padding: 1px 3px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  box-decoration-break: clone;
+.contxtly-context-translation-source {
+  font-style: italic;
+  color: #64748b;
 }
 
-.contxtly-highlight:hover {
-  background: #fde047;
+.contxtly-context-translation-target {
+  color: #475569;
+  margin-top: 3px;
 }
+
+/* Simple translation text */
+.contxtly-simple-translation {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+/* ── Delete button ────────────────────────────────────────────────────────── */
 
 .contxtly-tooltip-delete {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 24px;
-  height: 24px;
-  padding: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
   background: none;
   border: none;
-  border-radius: 4px;
-  color: #9ca3af;
+  border-radius: 6px;
+  color: #cbd5e1;
   cursor: pointer;
-  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
 }
 
 .contxtly-tooltip-delete:hover {
-  background: #fee2e2;
-  color: #ef4444;
+  background: #fef2f2;
+  color: #f87171;
 }
 
 .contxtly-tooltip-delete svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+}
+
+.contxtly-tooltip.contxtly-tooltip-simple .contxtly-tooltip-delete {
+  position: static;
+  flex-shrink: 0;
+}
+
+/* ── Word highlights ──────────────────────────────────────────────────────── */
+/*
+ * Modern highlight: light tinted background + inset bottom shadow acting as
+ * a colored underline. box-decoration-break: clone ensures the underline
+ * repeats across line wraps.
+ * Each type maps to the same accent used in its breakdown section.
+ */
+
+.contxtly-highlight {
+  background: rgba(254, 249, 195, 0.55);
+  border-radius: 3px;
+  padding: 0 2px 1px;
+  cursor: pointer;
+  transition: background 0.18s, box-shadow 0.18s;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  box-shadow: inset 0 -2px 0 rgba(234, 179, 8, 0.55);
+}
+
+.contxtly-highlight:hover {
+  background: rgba(254, 249, 195, 0.85);
+  box-shadow: inset 0 -2px 0 rgba(234, 179, 8, 0.85);
+}
+
+/* Verb → blue */
+.contxtly-highlight.contxtly-verb {
+  background: rgba(219, 234, 254, 0.45);
+  box-shadow: inset 0 -2px 0 rgba(96, 165, 250, 0.55);
+}
+.contxtly-highlight.contxtly-verb:hover {
+  background: rgba(219, 234, 254, 0.75);
+  box-shadow: inset 0 -2px 0 rgba(96, 165, 250, 0.85);
+}
+
+/* Noun → violet */
+.contxtly-highlight.contxtly-noun {
+  background: rgba(237, 233, 254, 0.45);
+  box-shadow: inset 0 -2px 0 rgba(167, 139, 250, 0.55);
+}
+.contxtly-highlight.contxtly-noun:hover {
+  background: rgba(237, 233, 254, 0.75);
+  box-shadow: inset 0 -2px 0 rgba(167, 139, 250, 0.85);
+}
+
+/* Collocation → #bb0051 */
+.contxtly-highlight.contxtly-collocation {
+  background: rgba(187, 0, 81, 0.1);
+  box-shadow: inset 0 -2px 0 rgba(187, 0, 81, 0.55);
+}
+.contxtly-highlight.contxtly-collocation:hover {
+  background: rgba(187, 0, 81, 0.18);
+  box-shadow: inset 0 -2px 0 rgba(187, 0, 81, 0.85);
+}
+
+/* Expression → rose */
+.contxtly-highlight.contxtly-expression {
+  background: rgba(255, 228, 230, 0.45);
+  box-shadow: inset 0 -2px 0 rgba(251, 113, 133, 0.55);
+}
+.contxtly-highlight.contxtly-expression:hover {
+  background: rgba(255, 228, 230, 0.75);
+  box-shadow: inset 0 -2px 0 rgba(251, 113, 133, 0.85);
+}
+
+/* Compound → emerald */
+.contxtly-highlight.contxtly-compound {
+  background: rgba(209, 250, 229, 0.45);
+  box-shadow: inset 0 -2px 0 rgba(52, 211, 153, 0.55);
+}
+.contxtly-highlight.contxtly-compound:hover {
+  background: rgba(209, 250, 229, 0.75);
+  box-shadow: inset 0 -2px 0 rgba(52, 211, 153, 0.85);
 }

@@ -21,6 +21,7 @@ class TranslationResult:
     lemma: str | None = None  # Base form of the word (e.g., "strittig" for "strittige")
     related_words: list[dict] | None = None  # Other parts to highlight [{text, offset}, ...] (e.g., for "ausgehen": [{text:"von", offset:42}, {text:"aus", offset:70}])
     collocation_pattern: str | None = None  # Full pattern for display (e.g., "ausgehen + von")
+    word_type: str | None = None  # simple, conjugated_verb, plural_noun, noun, separable_prefix, collocation_verb, collocation_prep, fixed_expression, compound
 
     def to_dict(self) -> dict:
         result = {"translation": self.translation}
@@ -36,6 +37,8 @@ class TranslationResult:
             result["related_words"] = self.related_words
         if self.collocation_pattern:
             result["collocation_pattern"] = self.collocation_pattern
+        if self.word_type:
+            result["word_type"] = self.word_type
         return result
 
 
@@ -198,6 +201,11 @@ def translate_pipeline(
         ),
     )
 
+    # Compound detection overrides the generic word_type from the analyzer
+    final_word_type = analysis.word_type
+    if compound_parts and len(compound_parts) > 1:
+        final_word_type = "compound"
+
     result = TranslationResult(
         translation=translation,
         meaning=meaning,
@@ -206,6 +214,7 @@ def translate_pipeline(
         lemma=lemma,
         related_words=related_words if related_words else None,
         collocation_pattern=collocation_pattern,
+        word_type=final_word_type,
     )
     log.info(f"[PIPELINE] Final result: {result.to_dict()}")
 
