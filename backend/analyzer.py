@@ -111,8 +111,16 @@ def classify_word_type(token, lang: str) -> str:
     return "simple"
 
 
-def analyze_word(text: str, context: str = "", source_lang: str = "auto") -> WordAnalysis:
-    """Analyze a word using spaCy."""
+def analyze_word(text: str, context: str = "", source_lang: str = "auto", text_offset: int | None = None) -> WordAnalysis:
+    """Analyze a word using spaCy.
+
+    Args:
+        text: The word to analyze
+        context: Surrounding sentence for context
+        source_lang: Source language code or 'auto'
+        text_offset: Character offset of the word within the context string.
+                     Used to disambiguate when the same word appears multiple times.
+    """
     start = time.perf_counter()
 
     # Detect language if auto
@@ -144,10 +152,21 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto") -> Wor
         # Find our word in the context
         token = None
         text_lower = text.lower()
-        for t in doc:
-            if t.text.lower() == text_lower:
-                token = t
-                break
+
+        if text_offset is not None:
+            # Use character offset to find the exact token (handles duplicate words)
+            for t in doc:
+                if t.idx == text_offset and t.text.lower() == text_lower:
+                    token = t
+                    break
+
+        if token is None:
+            # Fallback: find by text match (first occurrence)
+            for t in doc:
+                if t.text.lower() == text_lower:
+                    token = t
+                    break
+
         if token is None:
             # Word not found in context, analyze alone
             doc = nlp(text)

@@ -9,14 +9,14 @@ const DEFAULT_SETTINGS = {
 
 // ── Message handlers ──────────────────────────────────────────────────────────
 
-async function handleTranslate({ text, context }) {
+async function handleTranslate({ text, context, text_offset }) {
   const { settings } = await chrome.storage.local.get(["settings"]);
   const { targetLang, mode } = settings || DEFAULT_SETTINGS;
 
   const res = await fetch(`${API_URL}/translate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, target_lang: targetLang, mode, context: context || null }),
+    body: JSON.stringify({ text, target_lang: targetLang, mode, context: context || null, text_offset: text_offset ?? null }),
   });
 
   if (!res.ok) throw new Error((await res.text()) || "API error");

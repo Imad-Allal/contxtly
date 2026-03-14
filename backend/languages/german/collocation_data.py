@@ -102,6 +102,7 @@ VERB_PREPOSITION_COLLOCATIONS: dict[tuple[str, str], str] = {
     ("dringen", "auf"): "auf etwas dringen",
     ("eingehen", "auf"): "auf etwas eingehen",
     ("einigen", "auf"): "sich auf etwas einigen",
+    ("einrichten", "auf"): "sich auf etwas einrichten",
     ("einladen", "auf"): "auf etwas einladen",
     ("einlassen", "auf"): "sich auf etwas einlassen",
     ("einstellen", "auf"): "sich auf etwas einstellen",

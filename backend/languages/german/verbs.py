@@ -1,8 +1,13 @@
 """German verb detection: separable verbs and compound tenses."""
 
+from dataclasses import dataclass
+
 import simplemma
 import spacy
 from models import TokenRef
+
+# All forms of the German reflexive pronoun
+REFLEXIVE_PRONOUNS = frozenset({"mich", "dich", "sich", "uns", "euch"})
 
 # Known separable verb prefixes - used as fallback when spaCy misses PTKVZ tagging
 SEPARABLE_PREFIXES = frozenset({
@@ -12,28 +17,19 @@ SEPARABLE_PREFIXES = frozenset({
 })
 
 
-def detect_separable_verb(word: str, doc: spacy.tokens.Doc) -> tuple[str, TokenRef] | None:
+def detect_separable_verb(target_token, doc: spacy.tokens.Doc) -> tuple[str, TokenRef] | None:
     """
     Detect if a verb is part of a separable verb construction.
 
     Example: "Ich ziehe mich an" → "ziehe" is part of "anziehen"
 
     Args:
-        word: The selected word (e.g., "ziehe")
+        target_token: The resolved spaCy token the user selected
         doc: spaCy Doc of the context
 
     Returns:
         Tuple of (infinitive, prefix_ref) or None if not separable
     """
-    target_token = None
-    for token in doc:
-        if token.text.lower() == word.lower():
-            target_token = token
-            break
-
-    if not target_token:
-        return None
-
     if target_token.pos_ not in ("VERB", "AUX"):
         return None
 
@@ -53,28 +49,19 @@ def detect_separable_verb(word: str, doc: spacy.tokens.Doc) -> tuple[str, TokenR
     return None
 
 
-def detect_separable_verb_from_prefix(word: str, doc: spacy.tokens.Doc) -> tuple[str, str, dict, int] | None:
+def detect_separable_verb_from_prefix(target_token, doc: spacy.tokens.Doc) -> tuple[str, str, dict, int] | None:
     """
     Detect full separable verb when user selects the prefix/particle.
 
     Example: "Er legte das Buch nieder" → "nieder" → "niederlegen"
 
     Args:
-        word: The selected word (e.g., "nieder")
+        target_token: The resolved spaCy token the user selected
         doc: spaCy Doc of the context
 
     Returns:
         Tuple of (infinitive, verb_text, verb_morph, verb_offset) or None if not a separable verb particle
     """
-    target_token = None
-    for token in doc:
-        if token.text.lower() == word.lower():
-            target_token = token
-            break
-
-    if not target_token:
-        return None
-
     # Check if this token is a separable verb particle (PTKVZ tag, svp dependency, or known prefix)
     is_particle = target_token.tag_ == "PTKVZ" or target_token.dep_ == "svp"
     is_known_prefix = (target_token.text.lower() in SEPARABLE_PREFIXES
@@ -101,7 +88,7 @@ def detect_separable_verb_from_prefix(word: str, doc: spacy.tokens.Doc) -> tuple
 
     # Lemmatize the verb using simplemma (more reliable than spaCy for irregular verbs)
     verb_lemma = simplemma.lemmatize(verb_token.text, lang="de")
-    infinitive = word.lower() + verb_lemma
+    infinitive = target_token.text.lower() + verb_lemma
     return (infinitive, verb_token.text, verb_morph, verb_token.idx)
 
 
@@ -138,17 +125,13 @@ def _are_syntactically_related(aux, main_verb) -> bool:
     return False
 
 
-def detect_compound_tense(target_word: str, doc: spacy.tokens.Doc) -> str | None:
-    """Detect German compound tenses by analyzing auxiliary + main verb patterns."""
-    main_verb = None
-    for token in doc:
-        if token.text.lower() == target_word.lower():
-            main_verb = token
-            break
+def detect_compound_tense(main_verb, doc: spacy.tokens.Doc) -> str | None:
+    """Detect German compound tenses by analyzing auxiliary + main verb patterns.
 
-    if not main_verb:
-        return None
-
+    Args:
+        main_verb: The resolved spaCy token the user selected
+        doc: spaCy Doc of the context
+    """
     # Find the closest syntactically-related auxiliary
     best_aux = None
     for token in doc:
@@ -180,3 +163,101 @@ def detect_compound_tense(target_word: str, doc: spacy.tokens.Doc) -> str | None
         return "Futur II (future perfect)" if has_second_aux else "Vorgangspassiv Präsens (present passive)"
 
     return GERMAN_COMPOUND_TENSES.get(key)
+
+
+@dataclass
+class LassenInfo:
+    """Detected lassen + verb construction."""
+    verb_infinitive: str       # infinitive of the main verb (e.g., "reparieren")
+    lassen_token_text: str     # conjugated form of lassen (e.g., "lässt")
+    lassen_token_idx: int      # character offset of lassen in context
+    lassen_morph: dict[str, str]  # morphology of lassen
+    verb_token_text: str       # the main verb text (e.g., "reparieren")
+    verb_token_idx: int        # character offset of the main verb
+    has_sich: bool             # whether "sich ... lassen" (passive-reflexive)
+    sich_token_text: str | None
+    sich_token_idx: int | None
+
+
+def detect_lassen_construction(
+    target, doc: spacy.tokens.Doc
+) -> LassenInfo | None:
+    """
+    Detect verb + lassen constructions.
+
+    Examples:
+        "Sie lässt das Auto reparieren" → reparieren lassen (to have sth repaired)
+        "Er lässt mich warten" → warten lassen (to make someone wait)
+        "Das lässt sich erklären" → sich erklären lassen (can be explained)
+
+    Works when user selects either "lassen" (any form) or the infinitive verb.
+
+    Args:
+        target: The resolved spaCy token the user selected
+        doc: spaCy Doc of the full context
+    """
+    # Scope all searches to the sentence containing the selected word
+    sent_tokens = list(target.sent) if target.sent else list(doc)
+
+    lassen_token = None
+    verb_token = None
+
+    if target.lemma_ == "lassen" or target.text.lower() in ("lassen", "lässt", "lass", "lasst", "ließ", "ließen", "ließt", "ließest"):
+        # User selected a form of "lassen" — find the infinitive it governs
+        lassen_token = target
+        # Look for an infinitive verb that is syntactically related
+        for t in sent_tokens:
+            if t == target:
+                continue
+            if t.pos_ == "VERB" and t.morph.get("VerbForm") == "Inf":
+                if _are_syntactically_related(lassen_token, t):
+                    verb_token = t
+                    break
+        # Also check for verbs headed by lassen (dependency child)
+        if not verb_token:
+            for t in sent_tokens:
+                if t == target:
+                    continue
+                if t.pos_ == "VERB" and (t.head == lassen_token or lassen_token.head == t):
+                    verb_token = t
+                    break
+    elif target.pos_ == "VERB":
+        # User selected a verb — check if "lassen" is in the sentence and related
+        for t in sent_tokens:
+            if t.lemma_ == "lassen" and t != target:
+                if _are_syntactically_related(t, target):
+                    lassen_token = t
+                    verb_token = target
+                    break
+
+    if not lassen_token or not verb_token:
+        return None
+
+    # Parse lassen morphology
+    lassen_morph = {}
+    for item in lassen_token.morph:
+        if "=" in item:
+            key, val = item.split("=", 1)
+            lassen_morph[key] = val
+
+    # Get the main verb infinitive
+    verb_infinitive = simplemma.lemmatize(verb_token.text, lang="de")
+
+    # Check for reflexive "sich ... lassen" within the same sentence
+    sich_token = None
+    for t in sent_tokens:
+        if t.text.lower() == "sich":
+            sich_token = t
+            break
+
+    return LassenInfo(
+        verb_infinitive=verb_infinitive,
+        lassen_token_text=lassen_token.text,
+        lassen_token_idx=lassen_token.idx,
+        lassen_morph=lassen_morph,
+        verb_token_text=verb_token.text,
+        verb_token_idx=verb_token.idx,
+        has_sich=sich_token is not None,
+        sich_token_text=sich_token.text if sich_token else None,
+        sich_token_idx=sich_token.idx if sich_token else None,
+    )

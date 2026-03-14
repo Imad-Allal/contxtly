@@ -1,4 +1,4 @@
-from analyzer import WordAnalysis
+from analyzer import WordAnalysis, get_model, parse_morphology
 from languages.base import describe_morphology
 
 # Definite articles by language, case and gender
@@ -88,17 +88,60 @@ def generate_plural_breakdown(analysis: WordAnalysis, singular_translation: str)
     return None
 
 
-def generate_compound_breakdown(compound_parts: list[tuple[str, str, str]]) -> str | None:
+def _get_part_gender(base: str, lang: str) -> str | None:
+    """Look up the gender of a compound part's base form using spaCy."""
+    nlp = get_model(lang)
+    if not nlp:
+        return None
+    doc = nlp(base)
+    if not doc:
+        return None
+    token = doc[0]
+    if token.pos_ not in ("NOUN", "PROPN"):
+        return None
+    morph = parse_morphology(token.morph)
+    return morph.get("Gender")
+
+
+def _format_compound_part(base: str, trans: str, lang: str) -> str:
+    """Format a single compound part with optional article for nouns."""
+    gender = _get_part_gender(base, lang)
+    if gender:
+        article = _get_article(lang, "Nom", gender)
+        if article:
+            return f"{article} {base} ({trans})"
+    return f"{base} ({trans})"
+
+
+def generate_compound_breakdown(
+    compound_parts: list[tuple[str, str, str]],
+    analysis: WordAnalysis | None = None,
+) -> str | None:
     """Generate breakdown for compound nouns.
 
     Args:
         compound_parts: List of (original_part, base_form, translation) tuples
+        analysis: Optional WordAnalysis to include morphology (gender, case, number)
     """
     if not compound_parts or len(compound_parts) < 2:
         return None
 
-    # Format: "krank (sick) + Haus (house)" - using base form
-    parts_str = " + ".join(f"{base} ({trans})" for _, base, trans in compound_parts)
+    lang = analysis.lang if analysis else ""
+
+    # Format each part with its article: "der Zapfen (robinet) + die Säule (colonne)"
+    parts_str = " + ".join(
+        _format_compound_part(base, trans, lang)
+        for _, base, trans in compound_parts
+    )
+
+    # Add whole-word morphology info if available (gender, number, case)
+    if analysis:
+        morph_desc = describe_morphology(analysis.morph, include=["Gender", "Number", "Case"])
+        if morph_desc:
+            article = _get_article(analysis.lang, analysis.morph.get("Case"), analysis.morph.get("Gender"))
+            prefix = f"{article} " if article else ""
+            return f"{prefix}{analysis.lemma} ({morph_desc}) → {parts_str}"
+
     return parts_str
 
 
@@ -122,7 +165,7 @@ def generate_breakdown(
         Breakdown string or None if word is simple
     """
     if compound_parts:
-        return generate_compound_breakdown(compound_parts)
+        return generate_compound_breakdown(compound_parts, analysis)
 
     if analysis.word_type == "conjugated_verb":
         return generate_verb_breakdown(analysis, base_translation)

@@ -44,6 +44,7 @@ class TranslateRequest(BaseModel):
     target_lang: str = "en"
     context: str | None = None
     mode: str = "simple"
+    text_offset: int | None = None
 
 
 @app.post("/translate")
@@ -55,6 +56,7 @@ def translate(req: TranslateRequest):
             source_lang=req.source_lang,
             target_lang=req.target_lang,
             mode=req.mode,
+            text_offset=req.text_offset,
         )
         return result.to_dict()
     except Exception as e:
