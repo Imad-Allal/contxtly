@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import spacy
 from models import TokenRef
+from languages.german.verbs import REFLEXIVE_PRONOUNS
 from languages.german.nomen_verb_data import (
     NOMEN_VERB, NOMEN_VERB_INDEX,
     NOMEN_VERB_PREP, NOMEN_VERB_PREP_INDEX,
@@ -20,25 +21,24 @@ class NomenVerbInfo:
 
 
 def detect_nomen_verb(
-    word: str, doc: spacy.tokens.Doc
+    target, doc: spacy.tokens.Doc
 ) -> NomenVerbInfo | None:
     """Detect Nomen-Verb-Verbindungen from context.
 
     When the user selects a noun or verb, checks if the sentence contains
     a known noun+verb combination.
-    """
-    word_lower = word.lower()
-    target = next((t for t in doc if t.text.lower() == word_lower), None)
-    if not target:
-        return None
 
+    Args:
+        target: The resolved spaCy token the user selected
+        doc: spaCy Doc of the context
+    """
     # Determine noun_token and verb_token based on what was selected
     if target.pos_ == "NOUN":
         return _match_from_noun(target, doc)
     elif target.pos_ == "VERB":
         return _match_from_verb(target, doc)
-    elif target.text.lower() == "sich":
-        # User selected the reflexive pronoun — try to find the NVV from context
+    elif target.text.lower() in REFLEXIVE_PRONOUNS:
+        # User selected a reflexive pronoun — try to find the NVV from context
         return _match_from_sich(target, doc)
 
     return None
@@ -179,9 +179,9 @@ def _match_from_verb(
 
 
 def _find_sich(doc: spacy.tokens.Doc):
-    """Return the 'sich' token if present in the doc, else None."""
+    """Return the reflexive pronoun token (sich/mich/dich/uns/euch) if present, else None."""
     for t in doc:
-        if t.text.lower() == "sich":
+        if t.text.lower() in REFLEXIVE_PRONOUNS:
             return t
     return None
 

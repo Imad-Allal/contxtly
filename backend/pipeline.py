@@ -48,6 +48,7 @@ def translate_pipeline(
     source_lang: str = "auto",
     target_lang: str = "en",
     mode: str = "simple",
+    text_offset: int | None = None,
 ) -> TranslationResult:
     """
     Full translation pipeline.
@@ -84,7 +85,7 @@ def translate_pipeline(
     # Step 1: Analyze word
     log.info("[STEP 1] Analyzing word with spaCy...")
     with TimingBlock("Step 1: analyze_word"):
-        analysis = analyze_word(text, context, source_lang)
+        analysis = analyze_word(text, context, source_lang, text_offset=text_offset)
     detected_lang = analysis.lang
 
     # Check cache - full hit (same word+context)

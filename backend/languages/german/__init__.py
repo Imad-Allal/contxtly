@@ -3,7 +3,7 @@
 from models import TokenRef
 from languages.base import LanguageConfig, LanguageModule, LanguageAnalysis, describe_morphology
 from languages.german.compounds import split_compound
-from languages.german.verbs import detect_separable_verb, detect_separable_verb_from_prefix, detect_compound_tense
+from languages.german.verbs import detect_separable_verb, detect_separable_verb_from_prefix, detect_compound_tense, detect_lassen_construction, LassenInfo
 from languages.german.collocations import CollocationInfo, detect_verb_preposition_collocation
 from languages.german.expressions import FixedExpressionInfo, detect_fixed_expression
 from languages.german.nomen_verbs import NomenVerbInfo, detect_nomen_verb
@@ -48,34 +48,39 @@ class German(LanguageModule):
         """Run all German-specific detections and return a LanguageAnalysis."""
 
         # --- Fixed expression detection (highest priority) ---
-        expression = detect_fixed_expression(word, doc)
+        expression = detect_fixed_expression(token, doc)
         if expression:
             return self._analyze_fixed_expression(word, expression)
 
         # --- Nomen-Verb-Verbindungen detection ---
-        nv = detect_nomen_verb(word, doc)
+        nv = detect_nomen_verb(token, doc)
         if nv:
             return self._analyze_fixed_expression(word, nv)
 
         # --- Collocation detection ---
-        collocation = detect_verb_preposition_collocation(word, doc)
+        collocation = detect_verb_preposition_collocation(token, doc)
         if collocation:
             return self._analyze_collocation(word, token, collocation, morph)
 
+        # --- Lassen + verb construction ---
+        lassen = detect_lassen_construction(token, doc)
+        if lassen:
+            return self._analyze_lassen(word, lassen)
+
         # --- Separable verb detection (from verb stem) ---
-        sv_result = detect_separable_verb(word, doc)
+        sv_result = detect_separable_verb(token, doc)
         if sv_result:
             infinitive, prefix_ref = sv_result
             return self._analyze_separable_from_verb(word, token, infinitive, prefix_ref, morph)
 
         # --- Separable verb detection (from prefix/particle) ---
-        svp_result = detect_separable_verb_from_prefix(word, doc)
+        svp_result = detect_separable_verb_from_prefix(token, doc)
         if svp_result:
             infinitive, verb_text, verb_morph, verb_offset = svp_result
             return self._analyze_separable_from_prefix(word, infinitive, verb_text, verb_morph, verb_offset)
 
         # --- Compound tense detection ---
-        compound_tense = detect_compound_tense(word, doc)
+        compound_tense = detect_compound_tense(token, doc)
         if compound_tense:
             return self._analyze_compound_tense(word, token, compound_tense, morph)
 
@@ -180,6 +185,41 @@ class German(LanguageModule):
             lemma=infinitive,
             word_type="separable_prefix",
             related=[TokenRef(verb_text, verb_offset)],
+            breakdown_fn=breakdown_fn,
+        )
+
+    def _analyze_lassen(self, word: str, info: LassenInfo) -> LanguageAnalysis:
+        """Build LanguageAnalysis for a verb + lassen construction."""
+        # Build canonical form: "sich reparieren lassen" or "reparieren lassen"
+        canonical = f"sich {info.verb_infinitive} lassen" if info.has_sich else f"{info.verb_infinitive} lassen"
+        selected_text = word
+
+        # Related tokens: all parts except the selected word
+        related = []
+        if info.lassen_token_text.lower() != word.lower():
+            related.append(TokenRef(info.lassen_token_text, info.lassen_token_idx))
+        if info.verb_token_text.lower() != word.lower():
+            related.append(TokenRef(info.verb_token_text, info.verb_token_idx))
+        if info.has_sich and info.sich_token_text and info.sich_token_text.lower() != word.lower():
+            related.append(TokenRef(info.sich_token_text, info.sich_token_idx))
+
+        lassen_morph = info.lassen_morph
+
+        def breakdown_fn(analysis, base_translation):
+            all_parts = [selected_text] + [r.text for r in related]
+            conjugated = " + ".join(all_parts)
+            morph_desc = describe_morphology(lassen_morph, include=["Tense", "Person", "Number", "Mood"])
+            if morph_desc:
+                return f"{canonical} ({base_translation}) → {conjugated} ({morph_desc})"
+            return f"{canonical} ({base_translation}) → {conjugated}"
+
+        return LanguageAnalysis(
+            translate=canonical,
+            lemma=canonical,
+            word_type="conjugated_verb",
+            related=related,
+            pattern=canonical,
+            llm_hint=canonical,
             breakdown_fn=breakdown_fn,
         )
 

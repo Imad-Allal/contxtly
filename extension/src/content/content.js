@@ -94,7 +94,13 @@ function extractSentence(selection) {
   const sentEnd = findBoundary(fullText, start + selected.length, 1);
   const sentence = fullText.slice(sentStart, sentEnd).trim();
 
-  return sentence !== selected ? sentence : null;
+  if (sentence === selected) return null;
+
+  // Compute offset of the selected word within the extracted sentence
+  const trimmedStart = fullText.slice(sentStart, sentEnd).indexOf(fullText.slice(sentStart, sentEnd).trim());
+  const textOffset = start - sentStart - trimmedStart;
+
+  return { sentence, textOffset };
 }
 
 function getBlock(node) {
@@ -144,7 +150,7 @@ function createDeleteHandler(text) {
 }
 
 // Translate
-async function translate(text, context, range, x, y) {
+async function translate(text, context, textOffset, range, x, y) {
   showTooltip(x, y);
 
   try {
@@ -153,7 +159,7 @@ async function translate(text, context, range, x, y) {
       return updateTooltip(cached, false, createDeleteHandler(text));
     }
 
-    const res = await chrome.runtime.sendMessage({ action: "translate", data: { text, context } });
+    const res = await chrome.runtime.sendMessage({ action: "translate", data: { text, context, text_offset: textOffset } });
 
     if (res.error) {
       updateTooltip(res.error, true);
@@ -183,7 +189,9 @@ document.addEventListener("mouseup", (e) => {
   dismissPopups();
 
   if (raw.length > 0 && raw.length < MAX_LENGTH) {
-    const context = extractSentence(selection);
+    const extracted = extractSentence(selection);
+    const context = extracted?.sentence || null;
+    const textOffset = extracted?.textOffset ?? null;
     const range = trimRange(selection);
     const text = range?.toString() || raw;
 
@@ -191,7 +199,7 @@ document.addEventListener("mouseup", (e) => {
     const x = rect.left + rect.width / 2;
     const y = rect.bottom;
 
-    showButton(x, y, () => translate(text, context, range, x, y));
+    showButton(x, y, () => translate(text, context, textOffset, range, x, y));
   }
 });
 

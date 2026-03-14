@@ -15,15 +15,19 @@ class FixedExpressionInfo:
 
 
 def detect_fixed_expression(
-    word: str, doc: spacy.tokens.Doc
+    target, doc: spacy.tokens.Doc
 ) -> FixedExpressionInfo | None:
     """Detect fixed expressions from context.
 
     Looks up the selected word in the reverse index, then checks if any
     candidate expression matches a contiguous sequence of tokens in the doc.
     Returns the longest match.
+
+    Args:
+        target: The resolved spaCy token the user selected
+        doc: spaCy Doc of the context
     """
-    word_lower = word.lower()
+    word_lower = target.text.lower()
     candidates = EXPRESSION_INDEX.get(word_lower)
     if not candidates:
         return None

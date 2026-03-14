@@ -1,11 +1,10 @@
 import type { Word } from "./types";
-import { MOCK_WORDS } from "./constants";
 
 export const isChromeExt =
   typeof chrome !== "undefined" && !!chrome?.runtime?.id;
 
 export async function loadWords(): Promise<Word[]> {
-  if (!isChromeExt) return MOCK_WORDS;
+  if (!isChromeExt) return [];
 
   const { highlights = {} } = await chrome.storage.local.get("highlights");
   const seen = new Set<string>();
