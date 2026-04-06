@@ -20,7 +20,7 @@ jobs:
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
             set -e
-            cd /app
+            cd /app/contxtly
             git pull origin main
-            docker compose up -d --build api
+            docker-compose up -d --build api
             docker image prune -f
