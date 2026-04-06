@@ -23,5 +23,6 @@ jobs:
             set -e
             cd /app/contxtly
             git pull origin main
-            docker-compose up -d --build api
+            docker-compose down
+            docker-compose up -d --build
             docker image prune -f
