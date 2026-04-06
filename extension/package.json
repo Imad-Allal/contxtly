@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch",
-    "build": "vite build"
+    "dev": "vite build --watch --mode dev",
+    "build": "vite build --mode prod"
   },
   "dependencies": {
     "framer-motion": "^11.0.0",

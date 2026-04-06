@@ -73,6 +73,46 @@
   font-size: 12px;
 }
 
+/* Auth / limit prompts */
+.contxtly-tooltip-auth,
+.contxtly-tooltip-limit {
+  padding: 12px 14px;
+}
+
+.contxtly-auth-msg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #475569;
+}
+
+.contxtly-auth-btn {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #4f46e5;
+  color: #fff;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.contxtly-auth-btn:hover {
+  background: #4338ca;
+}
+
+.contxtly-upgrade-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.contxtly-upgrade-btn:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+}
+
 /* ── Type badge ───────────────────────────────────────────────────────────── */
 
 .contxtly-type-badge {

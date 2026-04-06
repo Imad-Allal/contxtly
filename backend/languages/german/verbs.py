@@ -36,6 +36,10 @@ def detect_separable_verb(target_token, doc: spacy.tokens.Doc) -> tuple[str, Tok
     for token in doc:
         if token.head != target_token:
             continue
+        # Skip "zu" infinitive particle (e.g., "zu gehen") — not a separable prefix
+        # spaCy tags separable "zu" as PTKVZ, infinitive "zu" as PTKZU
+        if token.tag_ == "PTKZU":
+            continue
         is_particle = token.tag_ == "PTKVZ" or token.dep_ == "svp"
         is_known_prefix = (token.text.lower() in SEPARABLE_PREFIXES
                            and token.pos_ not in ("DET", "PRON", "NOUN")
@@ -163,6 +167,80 @@ def detect_compound_tense(main_verb, doc: spacy.tokens.Doc) -> str | None:
         return "Futur II (future perfect)" if has_second_aux else "Vorgangspassiv Präsens (present passive)"
 
     return GERMAN_COMPOUND_TENSES.get(key)
+
+
+# German modal verbs
+GERMAN_MODALS = frozenset({"können", "müssen", "sollen", "dürfen", "wollen", "mögen"})
+
+
+@dataclass
+class ModalVerbInfo:
+    """Detected modal verb + infinitive construction."""
+    modal_text: str        # conjugated modal form (e.g., "will")
+    modal_idx: int         # character offset of modal
+    modal_lemma: str       # modal infinitive (e.g., "wollen")
+    modal_morph: dict[str, str]  # morphology of the modal
+    verb_text: str         # the main verb text (e.g., "begrenzen")
+    verb_idx: int          # character offset of the main verb
+    verb_lemma: str        # infinitive of the main verb
+    selected: str          # "modal" or "verb" — which token the user selected
+
+
+def detect_modal_verb(target, doc: spacy.tokens.Doc) -> ModalVerbInfo | None:
+    """Detect modal verb + infinitive constructions.
+
+    Works when user selects either the modal verb (e.g., "will") or
+    the infinitive (e.g., "begrenzen").
+
+    Args:
+        target: The resolved spaCy token the user selected
+        doc: spaCy Doc of the context
+
+    Returns:
+        ModalVerbInfo or None
+    """
+    modal_token = None
+    verb_token = None
+
+    if target.pos_ == "VERB" and "VerbForm=Inf" in target.morph:
+        # User selected the infinitive — check if head is a modal
+        head = target.head
+        if head != target and (head.tag_ == "VMFIN" or head.lemma_ in GERMAN_MODALS):
+            if _are_syntactically_related(head, target):
+                modal_token = head
+                verb_token = target
+                selected = "verb"
+    elif target.tag_ == "VMFIN" or target.lemma_ in GERMAN_MODALS:
+        # User selected the modal — find the governed infinitive
+        modal_token = target
+        for t in doc:
+            if t == target:
+                continue
+            if t.pos_ == "VERB" and "VerbForm=Inf" in t.morph:
+                if _are_syntactically_related(target, t):
+                    verb_token = t
+                    selected = "modal"
+                    break
+
+    if not modal_token or not verb_token:
+        return None
+
+    modal_morph = {}
+    for item in modal_token.morph:
+        if "=" in item:
+            key, val = item.split("=", 1)
+            modal_morph[key] = val
+
+    return ModalVerbInfo(
+        modal_text=modal_token.text,
+        modal_idx=modal_token.idx,
+        modal_lemma=modal_token.lemma_,
+        modal_morph=modal_morph,
+        verb_text=verb_token.text,
+        verb_idx=verb_token.idx,
+        verb_lemma=simplemma.lemmatize(verb_token.text, lang="de"),
+        selected=selected,
+    )
 
 
 @dataclass

@@ -1,5 +1,7 @@
-.env
+# Secrets
+backend/.env
 
+# Build output
 dist/
 node_modules/
 venv/

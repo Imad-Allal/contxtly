@@ -3,6 +3,11 @@ import { resolve } from "path";
 import { copyFileSync, mkdirSync, existsSync } from "fs";
 import react from "@vitejs/plugin-react";
 
+const API_URLS = {
+  dev:  "http://localhost:8000",
+  prod: "https://api.contxtly.com",
+};
+
 function copyStaticFiles() {
   return {
     name: "copy-static-files",
@@ -36,8 +41,11 @@ function copyStaticFiles() {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), copyStaticFiles()],
+  define: {
+    "import.meta.env.VITE_API_URL": JSON.stringify(API_URLS[mode] ?? API_URLS.dev),
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,
@@ -61,4 +69,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from groq import Groq, InternalServerError
+from groq import Groq, InternalServerError, BadRequestError
 
 from config import settings
 from timing import record_timing
@@ -48,9 +48,9 @@ def llm_call(prompt: str, model: str = PRIMARY_MODEL, json_mode: bool = True) ->
 
             return content
 
-        except InternalServerError as e:
+        except (InternalServerError, BadRequestError) as e:
             if attempt_model != FALLBACK_MODEL:
-                log.warning(f"[LLM] {attempt_model} unavailable (503), falling back to {FALLBACK_MODEL}")
+                log.warning(f"[LLM] {attempt_model} failed ({type(e).__name__}), falling back to {FALLBACK_MODEL}")
             else:
                 log.error(f"[LLM] Fallback model also failed: {e}")
                 raise
@@ -67,6 +67,7 @@ def translate_smart(
     skip_context_translation: bool = False,
     compound_parts: list[str] | None = None,
     collocation_pattern: str | None = None,
+    modal_verb: str | None = None,
 ) -> dict:
     """
     Combined translation: word + meaning + base form + context translation + compound parts in one LLM call.
@@ -112,6 +113,10 @@ The context_translation MUST also use this idiomatic equivalent, not a literal r
     if lemma and lemma != word:
         lemma_instruction = f'\nAlso translate the base form (infinitive) "{lemma}" separately. Give the correct, natural dictionary translation — not a transliteration or invented word.'
 
+    modal_instruction = ""
+    if modal_verb:
+        modal_instruction = f'\nAlso translate the modal verb "{modal_verb}" as used in the context sentence. Give the conjugated translation matching the person/tense in context (e.g., "will" → "veut", "kann" → "peut", "muss" → "doit"), NOT the infinitive.'
+
     compound_instruction = ""
     if compound_parts:
         parts_str = ", ".join(f'"{p}"' for p in compound_parts)
@@ -121,16 +126,18 @@ The context_translation MUST also use this idiomatic equivalent, not a literal r
 {context_instruction}
 {collocation_instruction}
 {lemma_instruction}
+{modal_instruction}
 {compound_instruction}
 
 Return JSON with:
 - translation: {"the idiomatic translation of the COLLOCATION in " + target_lang + " (e.g., the full verbal phrase like 's''attendre à')" if collocation_pattern else "the context-appropriate translation in " + target_lang + " (MUST match the meaning used in the context sentence, not just the most common dictionary definition)"}
 - meaning: explain what the word means IN THIS SPECIFIC CONTEXT (one sentence in {target_lang})
 - base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null){"" if skip_context_translation else f"""
-- context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)"""}{'''
+- context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)"""}{f'''
+- modal_translation: conjugated translation of "{modal_verb}" matching the person/tense in context (e.g., "will" → "veut", "kann" → "peut", "muss" → "doit"). NEVER give the infinitive form.''' if modal_verb else ''}{'''
 - parts: array of objects with "part" (original), "base" (lemma/base form), and "translation" (translation of base form) for each compound part (only if compound parts were provided)''' if compound_parts else ''}
 
-Return ONLY valid JSON."""
+Return ONLY valid JSON. Do not use guillemets (« »), curly quotes, or any special punctuation inside JSON string values — use only plain straight quotes for quoting words within strings."""
 
     result = llm_call(prompt, model=PRIMARY_MODEL)
 
@@ -152,6 +159,7 @@ Return ONLY valid JSON."""
             "base_translation": result.get("base_translation"),
             "context_translation": result.get("context_translation"),
             "compound_parts": translated_parts,
+            "modal_translation": result.get("modal_translation"),
         }
         log.info(f"[TRANSLATE] Smart result: {output}")
         return output
@@ -163,6 +171,7 @@ Return ONLY valid JSON."""
         "base_translation": None,
         "context_translation": None,
         "compound_parts": None,
+        "modal_translation": None,
     }
 
 
@@ -174,7 +183,7 @@ def translate_simple(word: str, source_lang: str, target_lang: str) -> str:
 Return JSON with:
 - translation: the equivalent word/phrase in {target_lang}
 
-Return ONLY valid JSON."""
+Return ONLY valid JSON. Do not use guillemets (« »), curly quotes, or any special punctuation inside JSON string values — use only plain straight quotes for quoting words within strings."""
 
     result = llm_call(prompt, model=PRIMARY_MODEL)
     log.info(f"[TRANSLATE] Simple result: '{result}'")

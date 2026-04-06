@@ -1,4 +1,4 @@
-import { showButton, removeButton, showTooltip, updateTooltip, removeTooltip, isOwnElement } from "./ui.js";
+import { showButton, removeButton, showTooltip, updateTooltip, updateTooltipLogin, updateTooltipLimitReached, removeTooltip, isOwnElement } from "./ui.js";
 import { highlightSelection, getCachedTranslation, removeFromStorage, removeHighlightFromDOM } from "./highlight.js";
 
 const MAX_LENGTH = 500;
@@ -162,7 +162,17 @@ async function translate(text, context, textOffset, range, x, y) {
     const res = await chrome.runtime.sendMessage({ action: "translate", data: { text, context, text_offset: textOffset } });
 
     if (res.error) {
-      updateTooltip(res.error, true);
+      if (res.error === "NOT_AUTHENTICATED") {
+        updateTooltipLogin();
+      } else {
+        let parsed = null;
+        try { parsed = JSON.parse(res.error); } catch {}
+        if (parsed?.code === "LIMIT_REACHED") {
+          updateTooltipLimitReached();
+        } else {
+          updateTooltip(res.error, true);
+        }
+      }
     } else {
       // Use lemma (base form) for storage key if available
       const wordToSave = res.lemma || text;

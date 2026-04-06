@@ -168,6 +168,38 @@ export function removeTooltip() {
   tooltip = null;
 }
 
+export function updateTooltipLogin() {
+  if (!tooltip) return;
+  tooltip.className = "contxtly-tooltip contxtly-tooltip-auth";
+  tooltip.innerHTML = `
+    <div class="contxtly-auth-msg">
+      <span>Sign in to translate</span>
+      <button class="contxtly-auth-btn" id="contxtly-login-btn">Sign in with Google</button>
+    </div>`;
+  tooltip.querySelector("#contxtly-login-btn").onclick = (e) => {
+    e.stopPropagation();
+    chrome.runtime.sendMessage({ action: "login" });
+    removeTooltip();
+  };
+}
+
+export function updateTooltipLimitReached() {
+  if (!tooltip) return;
+  tooltip.className = "contxtly-tooltip contxtly-tooltip-limit";
+  tooltip.innerHTML = `
+    <div class="contxtly-auth-msg">
+      <span>Daily limit reached</span>
+      <button class="contxtly-auth-btn contxtly-upgrade-btn" id="contxtly-upgrade-btn">Upgrade</button>
+    </div>`;
+  tooltip.querySelector("#contxtly-upgrade-btn").onclick = (e) => {
+    e.stopPropagation();
+    chrome.runtime.sendMessage({ action: "getCheckoutUrl" }).then((res) => {
+      if (res?.url) chrome.runtime.sendMessage({ action: "openUrl", url: res.url });
+    });
+    removeTooltip();
+  };
+}
+
 export function showTranslationTooltip(x, y, content, onDelete) {
   removeTooltip();
   tooltip = document.createElement("div");

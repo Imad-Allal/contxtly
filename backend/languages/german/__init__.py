@@ -3,7 +3,7 @@
 from models import TokenRef
 from languages.base import LanguageConfig, LanguageModule, LanguageAnalysis, describe_morphology
 from languages.german.compounds import split_compound
-from languages.german.verbs import detect_separable_verb, detect_separable_verb_from_prefix, detect_compound_tense, detect_lassen_construction, LassenInfo
+from languages.german.verbs import detect_separable_verb, detect_separable_verb_from_prefix, detect_compound_tense, detect_modal_verb, ModalVerbInfo, detect_lassen_construction, LassenInfo
 from languages.german.collocations import CollocationInfo, detect_verb_preposition_collocation
 from languages.german.expressions import FixedExpressionInfo, detect_fixed_expression
 from languages.german.nomen_verbs import NomenVerbInfo, detect_nomen_verb
@@ -17,7 +17,7 @@ class German(LanguageModule):
         return LanguageConfig(
             code="de",
             name="German",
-            spacy_model="de_dep_news_trf",
+            spacy_model="de_core_news_lg",
         )
 
     def split_compound(self, word: str, lemma: str | None = None) -> list[str] | None:
@@ -84,6 +84,11 @@ class German(LanguageModule):
         if compound_tense:
             return self._analyze_compound_tense(word, token, compound_tense, morph)
 
+        # --- Modal verb + infinitive detection ---
+        modal = detect_modal_verb(token, doc)
+        if modal:
+            return self._analyze_modal_infinitive(word, modal)
+
         return None
 
     def _analyze_fixed_expression(
@@ -94,7 +99,7 @@ class German(LanguageModule):
         expr_related = expr.related
         selected_text = word
 
-        def breakdown_fn(analysis, base_translation):
+        def breakdown_fn(analysis, base_translation, extra_translations=None):
             all_parts = [selected_text] + [r.text for r in expr_related]
             parts_display = " + ".join(all_parts)
             return f"{expr_text} ({base_translation}) → {parts_display}"
@@ -125,7 +130,7 @@ class German(LanguageModule):
         col_related = collocation.related
         selected_text = word
 
-        def breakdown_fn(analysis, base_translation):
+        def breakdown_fn(analysis, base_translation, extra_translations=None):
             all_parts = [selected_text] + [r.text for r in col_related]
             conjugated = " + ".join(all_parts)
             morph_desc = ""
@@ -152,7 +157,7 @@ class German(LanguageModule):
         selected_text = word
         prefix_text = prefix_ref.text
 
-        def breakdown_fn(analysis, base_translation):
+        def breakdown_fn(analysis, base_translation, extra_translations=None):
             conjugated = f"{selected_text} + {prefix_text}"
             morph_desc = describe_morphology(morph, include=["Tense", "Person", "Number", "Mood"])
             if morph_desc:
@@ -173,7 +178,7 @@ class German(LanguageModule):
         """Build LanguageAnalysis when user selected the prefix/particle of a separable verb."""
         selected_text = word
 
-        def breakdown_fn(analysis, base_translation):
+        def breakdown_fn(analysis, base_translation, extra_translations=None):
             conjugated = f"{verb_text} + {selected_text}"
             morph_desc = describe_morphology(verb_morph, include=["Tense", "Person", "Number", "Mood"])
             if morph_desc:
@@ -205,7 +210,7 @@ class German(LanguageModule):
 
         lassen_morph = info.lassen_morph
 
-        def breakdown_fn(analysis, base_translation):
+        def breakdown_fn(analysis, base_translation, extra_translations=None):
             all_parts = [selected_text] + [r.text for r in related]
             conjugated = " + ".join(all_parts)
             morph_desc = describe_morphology(lassen_morph, include=["Tense", "Person", "Number", "Mood"])
@@ -230,10 +235,46 @@ class German(LanguageModule):
         lemma = token.lemma_
         selected_text = word
 
-        def breakdown_fn(analysis, base_translation):
+        def breakdown_fn(analysis, base_translation, extra_translations=None):
             return f"{lemma} ({base_translation}) → {selected_text} ({compound_tense})"
 
         return LanguageAnalysis(
             word_type="conjugated_verb",
+            breakdown_fn=breakdown_fn,
+        )
+
+    def _analyze_modal_infinitive(
+        self, word: str, info: ModalVerbInfo
+    ) -> LanguageAnalysis:
+        """Build LanguageAnalysis for a modal verb + infinitive construction."""
+        # The other token (the one not selected) is the related word to highlight
+        if info.selected == "verb":
+            related = [TokenRef(info.modal_text, info.modal_idx)]
+            translate_word = info.verb_lemma
+        else:
+            related = [TokenRef(info.verb_text, info.verb_idx)]
+            translate_word = info.verb_lemma
+
+        modal_morph = info.modal_morph
+
+        modal_text = info.modal_text
+        verb_lemma = info.verb_lemma
+
+        def breakdown_fn(analysis, base_translation, extra_translations=None):
+            modal_trans = (extra_translations or {}).get("modal_translation", "")
+            morph_desc = describe_morphology(modal_morph, include=["Tense", "Person", "Number", "Mood"])
+            modal_part = f"{modal_text} ({modal_trans})" if modal_trans else modal_text
+            verb_part = f"{verb_lemma} ({base_translation})"
+            result = f"{modal_part} + {verb_part}"
+            if morph_desc:
+                result += f" ({morph_desc})"
+            return result
+
+        return LanguageAnalysis(
+            translate=translate_word,
+            lemma=translate_word,
+            word_type="conjugated_verb",
+            related=related,
+            modal_verb=info.modal_text,
             breakdown_fn=breakdown_fn,
         )
