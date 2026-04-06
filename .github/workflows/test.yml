@@ -32,4 +32,4 @@ jobs:
 
       - name: Run tests
         working-directory: backend
-        run: pytest tests/test_accuracy.py -v -s --tb=short
+        run: python -m pytest tests/test_accuracy.py -v -s --tb=short
