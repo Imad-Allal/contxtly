@@ -5,7 +5,7 @@ import react from "@vitejs/plugin-react";
 
 const API_URLS = {
   dev:  "http://localhost:8000",
-  prod: "https://api.contxtly.com",
+  prod: "https://api.contxtly.xyz",
 };
 
 function copyStaticFiles() {

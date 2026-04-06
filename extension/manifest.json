@@ -3,9 +3,10 @@
   "name": "Contxtly",
   "version": "1.0.0",
   "description": "Contextual translator",
-  "permissions": ["storage", "identity"],
+  "permissions": ["storage", "identity", "tabs"],
   "host_permissions": [
     "http://localhost:8000/*",
+    "https://api.contxtly.xyz/*",
     "https://*.supabase.co/*"
   ],
   "background": {
