@@ -94,7 +94,8 @@ class LanguageAnalysis:
     # display string (e.g. "ausgehen + von")
     pattern: str | None = None
     llm_hint: str | None = None            # extra context for LLM prompt
-    # (analysis, base_translation) -> str | None
+    modal_verb: str | None = None          # conjugated modal verb to translate (e.g., "will")
+    # (analysis, base_translation, extra_translations) -> str | None
     breakdown_fn: Callable | None = None
 
 

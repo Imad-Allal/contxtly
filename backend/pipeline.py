@@ -135,12 +135,14 @@ def translate_pipeline(
     lemma_to_translate = None if (la and la.translate) else (analysis.lemma if analysis.lemma != text else None)
     # LLM hint for better translation (e.g. collocation pattern)
     llm_hint = la.llm_hint if la else None
+    modal_verb = la.modal_verb if la else None
     with TimingBlock("Step 2: translate_smart"):
         smart_result = translate_smart(
             word_to_translate, detected_lang, target_lang, context, lemma_to_translate,
             skip_context_translation=cached_context_translation is not None,
             compound_parts=compound_parts,
             collocation_pattern=llm_hint,
+            modal_verb=modal_verb,
         )
     translation = smart_result["translation"]
     meaning = smart_result["meaning"]
@@ -164,7 +166,11 @@ def translate_pipeline(
                 base_translation = translation
 
             if la and la.breakdown_fn:
-                breakdown = la.breakdown_fn(analysis, base_translation)
+                extra_translations = {}
+                modal_translation = smart_result.get("modal_translation")
+                if modal_translation:
+                    extra_translations["modal_translation"] = modal_translation
+                breakdown = la.breakdown_fn(analysis, base_translation, extra_translations)
             else:
                 breakdown = generate_breakdown(analysis, base_translation, translated_parts)
         log.info(f"[STEP 3] Breakdown: '{breakdown}'")

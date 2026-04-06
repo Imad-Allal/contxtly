@@ -203,6 +203,22 @@ export async function highlightSelection(range, text, translation) {
   }
 
   await saveHighlight(text, translation, context);
+
+  // Also persist to DB if the user is logged in
+  const { auth } = await chrome.storage.local.get("auth");
+  if (auth?.access_token) {
+    const translationStr = typeof translation === "string" ? translation : (translation?.translation || "");
+    chrome.runtime.sendMessage({
+      action: "saveWord",
+      data: {
+        text,
+        translation: translationStr,
+        context,
+        source_url: location.href,
+        data: typeof translation === "object" ? translation : null,
+      },
+    });
+  }
 }
 
 // Restore on page load

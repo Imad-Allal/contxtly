@@ -1,0 +1,14 @@
+services:
+  api:
+    build:
+      context: ./backend
+      target: dev
+    volumes:
+      - ./backend:/app        # hot reload — changes reflect instantly
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - REDIS_URL=redis://redis:6379
+
+  redis:
+    ports:
+      - "6379:6379"           # expose Redis locally for inspection

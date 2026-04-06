@@ -61,6 +61,68 @@ export function openUrl(url: string) {
   }
 }
 
+export async function getAuthSession(): Promise<{ access_token: string } | null> {
+  if (!isChromeExt) return null;
+  const { auth } = await chrome.storage.local.get("auth") as { auth?: { access_token: string } };
+  return auth || null;
+}
+
+export async function login(): Promise<void> {
+  if (!isChromeExt) return;
+  await chrome.runtime.sendMessage({ action: "login" });
+}
+
+export async function logout(): Promise<void> {
+  if (!isChromeExt) return;
+  await chrome.runtime.sendMessage({ action: "logout" });
+}
+
+export async function getUsage(): Promise<{ used: number; limit: number; plan: string } | null> {
+  if (!isChromeExt) return null;
+  const res = await chrome.runtime.sendMessage({ action: "getUsage" });
+  if (res?.error) return null;
+  return res;
+}
+
+export async function getPortalUrl(): Promise<string | null> {
+  if (!isChromeExt) return null;
+  const res = await chrome.runtime.sendMessage({ action: "getPortalUrl" });
+  if (res?.error) return null;
+  return res?.url || null;
+}
+
+export async function getCheckoutUrl(): Promise<string | null> {
+  if (!isChromeExt) return null;
+  const res = await chrome.runtime.sendMessage({ action: "getCheckoutUrl" });
+  if (res?.error) return null;
+  return res?.url || null;
+}
+
+export async function getWordsFromDB(): Promise<Word[]> {
+  if (!isChromeExt) return [];
+  const res = await chrome.runtime.sendMessage({ action: "getWords" });
+  if (!res || res.error) return [];
+  // Map DB rows to the Word shape the UI expects
+  return res.map((row: { id: string; text: string; translation: string; data?: object; context?: string; source_url?: string }) => ({
+    id: row.id,
+    text: row.text,
+    lemma: row.text,
+    translation: row.data || row.translation,
+    url: row.source_url,
+    timestamp: undefined,
+  }));
+}
+
+export async function saveWordToDB(word: { text: string; translation: string; context?: string; source_url?: string; data?: object }): Promise<void> {
+  if (!isChromeExt) return;
+  await chrome.runtime.sendMessage({ action: "saveWord", data: word });
+}
+
+export async function deleteWordFromDB(id: string): Promise<void> {
+  if (!isChromeExt) return;
+  await chrome.runtime.sendMessage({ action: "deleteWord", data: { id } });
+}
+
 export async function exportToAnki(): Promise<{ msg: string; error: boolean }> {
   if (!isChromeExt) {
     await new Promise((r) => setTimeout(r, 900));
