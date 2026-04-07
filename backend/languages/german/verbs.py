@@ -184,6 +184,7 @@ class ModalVerbInfo:
     verb_idx: int          # character offset of the main verb
     verb_lemma: str        # infinitive of the main verb
     selected: str          # "modal" or "verb" — which token the user selected
+    cluster: list[tuple[str, int]] = None  # additional verbs in cluster [(text, idx), ...]
 
 
 def detect_modal_verb(target, doc: spacy.tokens.Doc) -> ModalVerbInfo | None:
@@ -231,6 +232,15 @@ def detect_modal_verb(target, doc: spacy.tokens.Doc) -> ModalVerbInfo | None:
             key, val = item.split("=", 1)
             modal_morph[key] = val
 
+    # Collect any additional verbs in the cluster (e.g. lassen in "sollte bombardieren lassen")
+    # Look for infinitive/past-participle dependents of the main verb token
+    cluster = []
+    for t in doc:
+        if t == modal_token or t == verb_token:
+            continue
+        if t.pos_ == "VERB" and t.head == verb_token and _are_syntactically_related(verb_token, t):
+            cluster.append((t.text, t.idx))
+
     return ModalVerbInfo(
         modal_text=modal_token.text,
         modal_idx=modal_token.idx,
@@ -240,6 +250,7 @@ def detect_modal_verb(target, doc: spacy.tokens.Doc) -> ModalVerbInfo | None:
         verb_idx=verb_token.idx,
         verb_lemma=simplemma.lemmatize(verb_token.text, lang="de"),
         selected=selected,
+        cluster=cluster,
     )
 
 

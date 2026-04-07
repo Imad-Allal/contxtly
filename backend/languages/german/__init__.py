@@ -65,7 +65,7 @@ class German(LanguageModule):
         # --- Lassen + verb construction ---
         lassen = detect_lassen_construction(token, doc)
         if lassen:
-            return self._analyze_lassen(word, lassen)
+            return self._analyze_lassen(word, lassen, doc)
 
         # --- Separable verb detection (from verb stem) ---
         sv_result = detect_separable_verb(token, doc)
@@ -193,13 +193,10 @@ class German(LanguageModule):
             breakdown_fn=breakdown_fn,
         )
 
-    def _analyze_lassen(self, word: str, info: LassenInfo) -> LanguageAnalysis:
-        """Build LanguageAnalysis for a verb + lassen construction."""
-        # Build canonical form: "sich reparieren lassen" or "reparieren lassen"
+    def _analyze_lassen(self, word: str, info: LassenInfo, doc=None) -> LanguageAnalysis:
         canonical = f"sich {info.verb_infinitive} lassen" if info.has_sich else f"{info.verb_infinitive} lassen"
         selected_text = word
 
-        # Related tokens: all parts except the selected word
         related = []
         if info.lassen_token_text.lower() != word.lower():
             related.append(TokenRef(info.lassen_token_text, info.lassen_token_idx))
@@ -207,6 +204,13 @@ class German(LanguageModule):
             related.append(TokenRef(info.verb_token_text, info.verb_token_idx))
         if info.has_sich and info.sich_token_text and info.sich_token_text.lower() != word.lower():
             related.append(TokenRef(info.sich_token_text, info.sich_token_idx))
+
+        if doc is not None:
+            verb_token = next((t for t in doc if t.idx == info.verb_token_idx), None)
+            if verb_token:
+                modal_info = detect_modal_verb(verb_token, doc)
+                if modal_info and modal_info.modal_text.lower() != word.lower():
+                    related.append(TokenRef(modal_info.modal_text, modal_info.modal_idx))
 
         lassen_morph = info.lassen_morph
 
@@ -254,6 +258,10 @@ class German(LanguageModule):
         else:
             related = [TokenRef(info.verb_text, info.verb_idx)]
             translate_word = info.verb_lemma
+
+        for text, idx in (info.cluster or []):
+            if text.lower() != word.lower():
+                related.append(TokenRef(text, idx))
 
         modal_morph = info.modal_morph
 
