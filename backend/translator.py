@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 client = Groq(api_key=settings.groq_api_key)
 
 # Models
-PRIMARY_MODEL = "moonshotai/kimi-k2-instruct"
+PRIMARY_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 FALLBACK_MODEL = "llama-3.3-70b-versatile"
 
 
@@ -130,8 +130,8 @@ The context_translation MUST also use this idiomatic equivalent, not a literal r
 {compound_instruction}
 
 Return JSON with:
-- translation: {"the idiomatic translation of the COLLOCATION in " + target_lang + " (e.g., the full verbal phrase like 's''attendre à')" if collocation_pattern else "the context-appropriate translation in " + target_lang + " (MUST match the meaning used in the context sentence, not just the most common dictionary definition)"}
-- meaning: explain what the word means IN THIS SPECIFIC CONTEXT (one sentence in {target_lang})
+- translation: {"the idiomatic translation of the COLLOCATION in " + target_lang + " (e.g., the full verbal phrase like 's''attendre à')" if collocation_pattern else "the SHORT, CONCISE dictionary translation of the word itself in " + target_lang + " — 1 to 4 words maximum, like a dictionary entry (e.g. 'être disponible', 'partir', 'maison'). Do NOT use the context sentence to build a phrase. Translate the WORD, not the sentence."}
+- meaning: one sentence in {target_lang} explaining what "{word}" means IN THIS SPECIFIC CONTEXT (use the context sentence to explain, but keep it concise)
 - base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null){"" if skip_context_translation else f"""
 - context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)"""}{f'''
 - modal_translation: conjugated translation of "{modal_verb}" matching the person/tense in context (e.g., "will" → "veut", "kann" → "peut", "muss" → "doit"). NEVER give the infinitive form.''' if modal_verb else ''}{'''

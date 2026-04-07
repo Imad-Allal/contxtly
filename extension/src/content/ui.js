@@ -84,9 +84,16 @@ function formatTranslation(data) {
       html += `<div class="contxtly-section contxtly-breakdown">${escapeHtml(data.breakdown)}</div>`;
     }
     if (data.context_translation?.source) {
+      const boldTerm = (text, term) => {
+        if (!term) return escapeHtml(text);
+        const escapedText = escapeHtml(text);
+        const escapedTerm = escapeHtml(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return escapedText.replace(new RegExp(`(${escapedTerm})`, 'gi'), '<strong>$1</strong>');
+      };
+
       html += `<div class="contxtly-section contxtly-context-translation">
-        <div class="contxtly-context-translation-source">${escapeHtml(data.context_translation.source)}</div>
-        <div class="contxtly-context-translation-target">${escapeHtml(data.context_translation.target)}</div>
+        <div class="contxtly-context-translation-source">${boldTerm(data.context_translation.source, data.lemma)}</div>
+        <div class="contxtly-context-translation-target">${boldTerm(data.context_translation.target, data.translation)}</div>
       </div>`;
     }
 
