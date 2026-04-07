@@ -206,9 +206,9 @@ class German(LanguageModule):
             related.append(TokenRef(info.sich_token_text, info.sich_token_idx))
 
         if doc is not None:
-            verb_token = next((t for t in doc if t.idx == info.verb_token_idx), None)
-            if verb_token:
-                modal_info = detect_modal_verb(verb_token, doc)
+            lassen_token = next((t for t in doc if t.idx == info.lassen_token_idx), None)
+            if lassen_token:
+                modal_info = detect_modal_verb(lassen_token, doc)
                 if modal_info and modal_info.modal_text.lower() != word.lower():
                     related.append(TokenRef(modal_info.modal_text, modal_info.modal_idx))
 

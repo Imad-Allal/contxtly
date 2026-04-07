@@ -74,8 +74,8 @@ def generate_plural_breakdown(analysis: WordAnalysis, singular_translation: str)
     lemma = analysis.lemma
 
     gender = analysis.morph.get("Gender")
-    gender_desc = describe_morphology(analysis.morph, include=["Gender"])
-    morph_parts = [gender_desc] if gender_desc else []
+    case_desc = describe_morphology(analysis.morph, include=["Gender", "Case"])
+    morph_parts = [case_desc] if case_desc else []
     morph_parts.append("plural")
     morph_desc = ", ".join(morph_parts)
 
@@ -145,6 +145,39 @@ def generate_compound_breakdown(
     return parts_str
 
 
+def generate_adjective_breakdown(analysis: WordAnalysis, translation: str) -> str | None:
+    """Generate breakdown for adjectives showing base form and degree."""
+    if analysis.word_type != "adjective":
+        return None
+
+    lemma = analysis.lemma
+    text = analysis.text
+
+    degree = analysis.morph.get("Degree")
+    morph_parts = []
+
+    if degree == "Cmp":
+        morph_parts.append("comparative")
+    elif degree == "Sup":
+        morph_parts.append("superlative")
+
+    gender = analysis.morph.get("Gender")
+    case = analysis.morph.get("Case")
+    if gender or case:
+        case_gender = describe_morphology(analysis.morph, include=["Gender", "Case", "Number"])
+        if case_gender:
+            morph_parts.append(case_gender)
+
+    if lemma and lemma.lower() != text.lower():
+        morph_desc = ", ".join(morph_parts) if morph_parts else "inflected"
+        return f"{lemma} ({translation}) → {text} ({morph_desc})"
+
+    if morph_parts:
+        return f"{lemma} ({translation}) → {', '.join(morph_parts)}"
+
+    return None
+
+
 def generate_breakdown(
     analysis: WordAnalysis,
     base_translation: str,
@@ -175,5 +208,8 @@ def generate_breakdown(
 
     if analysis.word_type == "plural_noun":
         return generate_plural_breakdown(analysis, base_translation)
+
+    if analysis.word_type == "adjective":
+        return generate_adjective_breakdown(analysis, base_translation)
 
     return None

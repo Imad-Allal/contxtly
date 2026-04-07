@@ -149,8 +149,13 @@ function createDeleteHandler(text) {
   };
 }
 
+// Translation lock — prevents concurrent translations
+let translating = false;
+
 // Translate
 async function translate(text, context, textOffset, range, x, y) {
+  if (translating) return;
+  translating = true;
   showTooltip(x, y);
 
   try {
@@ -181,6 +186,8 @@ async function translate(text, context, textOffset, range, x, y) {
     }
   } catch {
     updateTooltip("Translation failed", true);
+  } finally {
+    translating = false;
   }
 }
 
@@ -209,7 +216,7 @@ document.addEventListener("mouseup", (e) => {
     const x = rect.left + rect.width / 2;
     const y = rect.bottom;
 
-    showButton(x, y, () => translate(text, context, textOffset, range, x, y));
+    if (!translating) showButton(x, y, () => translate(text, context, textOffset, range, x, y));
   }
 });
 

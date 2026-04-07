@@ -16,6 +16,7 @@ const TYPE_INFO = {
   collocation_prep: { cls: "contxtly-collocation", label: "Collocation" },
   noun:             { cls: "contxtly-noun",        label: "Noun" },
   plural_noun:      { cls: "contxtly-noun",        label: "Noun" },
+  adjective:        { cls: "contxtly-adjective",   label: "Adjective" },
   fixed_expression: { cls: "contxtly-expression",  label: "Expression" },
   compound:         { cls: "contxtly-compound",    label: "Compound" },
 };
@@ -241,6 +242,7 @@ const HIGHLIGHT_COLORS = {
   "":                     { bg: "rgba(254,249,195,0.55)", bgHover: "rgba(254,249,195,0.85)", shadow: "inset 0 -2px 0 rgba(234,179,8,0.55)",    shadowHover: "inset 0 -2px 0 rgba(234,179,8,0.85)" },
   "contxtly-verb":        { bg: "rgba(219,234,254,0.45)", bgHover: "rgba(219,234,254,0.75)", shadow: "inset 0 -2px 0 rgba(96,165,250,0.55)",   shadowHover: "inset 0 -2px 0 rgba(96,165,250,0.85)" },
   "contxtly-noun":        { bg: "rgba(237,233,254,0.45)", bgHover: "rgba(237,233,254,0.75)", shadow: "inset 0 -2px 0 rgba(167,139,250,0.55)",  shadowHover: "inset 0 -2px 0 rgba(167,139,250,0.85)" },
+  "contxtly-adjective":   { bg: "rgba(254,243,199,0.45)", bgHover: "rgba(254,243,199,0.75)", shadow: "inset 0 -2px 0 rgba(245,158,11,0.55)",   shadowHover: "inset 0 -2px 0 rgba(245,158,11,0.85)" },
   "contxtly-collocation": { bg: "rgba(187,0,81,0.1)",     bgHover: "rgba(187,0,81,0.18)",   shadow: "inset 0 -2px 0 rgba(187,0,81,0.55)",     shadowHover: "inset 0 -2px 0 rgba(187,0,81,0.85)" },
   "contxtly-expression":  { bg: "rgba(255,228,230,0.45)", bgHover: "rgba(255,228,230,0.75)", shadow: "inset 0 -2px 0 rgba(251,113,133,0.55)",  shadowHover: "inset 0 -2px 0 rgba(251,113,133,0.85)" },
   "contxtly-compound":    { bg: "rgba(209,250,229,0.45)", bgHover: "rgba(209,250,229,0.75)", shadow: "inset 0 -2px 0 rgba(52,211,153,0.55)",   shadowHover: "inset 0 -2px 0 rgba(52,211,153,0.85)" },

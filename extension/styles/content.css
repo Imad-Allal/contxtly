@@ -130,6 +130,7 @@
 
 .contxtly-verb-badge        { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
 .contxtly-noun-badge        { background: #f5f3ff; color: #5b21b6; border-color: #ddd6fe; }
+.contxtly-adjective-badge   { background: #fffbeb; color: #92400e; border-color: #fde68a; }
 .contxtly-collocation-badge { background: #fff0f6; color: #bb0051; border-color: #f9a8c9; }
 .contxtly-expression-badge  { background: #fff1f2; color: #9d174d; border-color: #fecdd3; }
 .contxtly-compound-badge    { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
@@ -198,6 +199,13 @@
   color: #9d174d;
   background: #fff1f2;
   border-color: #fecdd3;
+}
+
+/* Breakdown — adjective (amber) */
+.contxtly-adjective .contxtly-breakdown {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fde68a;
 }
 
 /* Breakdown — compound (emerald) */
@@ -310,6 +318,16 @@
 .contxtly-highlight.contxtly-noun:hover {
   background: rgba(237, 233, 254, 0.75);
   box-shadow: inset 0 -2px 0 rgba(167, 139, 250, 0.85);
+}
+
+/* Adjective → amber */
+.contxtly-highlight.contxtly-adjective {
+  background: rgba(254, 243, 199, 0.45);
+  box-shadow: inset 0 -2px 0 rgba(245, 158, 11, 0.55);
+}
+.contxtly-highlight.contxtly-adjective:hover {
+  background: rgba(254, 243, 199, 0.75);
+  box-shadow: inset 0 -2px 0 rgba(245, 158, 11, 0.85);
 }
 
 /* Collocation → #bb0051 */

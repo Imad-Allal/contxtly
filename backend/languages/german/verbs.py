@@ -204,7 +204,6 @@ def detect_modal_verb(target, doc: spacy.tokens.Doc) -> ModalVerbInfo | None:
     verb_token = None
 
     if target.pos_ == "VERB" and "VerbForm=Inf" in target.morph:
-        # User selected the infinitive — check if head is a modal
         head = target.head
         if head != target and (head.tag_ == "VMFIN" or head.lemma_ in GERMAN_MODALS):
             if _are_syntactically_related(head, target):
@@ -212,16 +211,22 @@ def detect_modal_verb(target, doc: spacy.tokens.Doc) -> ModalVerbInfo | None:
                 verb_token = target
                 selected = "verb"
     elif target.tag_ == "VMFIN" or target.lemma_ in GERMAN_MODALS:
-        # User selected the modal — find the governed infinitive
         modal_token = target
+        lassen_candidate = None
         for t in doc:
             if t == target:
                 continue
             if t.pos_ == "VERB" and "VerbForm=Inf" in t.morph:
                 if _are_syntactically_related(target, t):
-                    verb_token = t
-                    selected = "modal"
-                    break
+                    if t.lemma_ == "lassen":
+                        lassen_candidate = t
+                    else:
+                        verb_token = t
+                        selected = "modal"
+                        break
+        if verb_token is None and lassen_candidate is not None:
+            verb_token = lassen_candidate
+            selected = "modal"
 
     if not modal_token or not verb_token:
         return None
@@ -232,13 +237,13 @@ def detect_modal_verb(target, doc: spacy.tokens.Doc) -> ModalVerbInfo | None:
             key, val = item.split("=", 1)
             modal_morph[key] = val
 
-    # Collect any additional verbs in the cluster (e.g. lassen in "sollte bombardieren lassen")
-    # Look for infinitive/past-participle dependents of the main verb token
     cluster = []
     for t in doc:
         if t == modal_token or t == verb_token:
             continue
-        if t.pos_ == "VERB" and t.head == verb_token and _are_syntactically_related(verb_token, t):
+        if t.pos_ not in ("VERB", "AUX"):
+            continue
+        if (t.head == modal_token or t.head == verb_token) and _are_syntactically_related(modal_token, t):
             cluster.append((t.text, t.idx))
 
     return ModalVerbInfo(

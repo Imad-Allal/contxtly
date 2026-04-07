@@ -20,7 +20,7 @@ class WordAnalysis:
     pos: str
     morph: dict[str, str]
     lang: str
-    word_type: str  # simple, conjugated_verb, plural_noun, separable_prefix, collocation_verb, collocation_prep, fixed_expression
+    word_type: str  # simple, conjugated_verb, plural_noun, adjective, separable_prefix, collocation_verb, collocation_prep, fixed_expression
     lang_analysis: LanguageAnalysis | None = None
 
 
@@ -107,6 +107,9 @@ def classify_word_type(token, lang: str) -> str:
         if morph.get("Number") == "Plur":
             return "plural_noun"
         return "noun"
+
+    if pos == "ADJ":
+        return "adjective"
 
     return "simple"
 

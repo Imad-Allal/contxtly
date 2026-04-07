@@ -1,6 +1,8 @@
+import asyncio
 import logging
 import traceback
 from contextlib import asynccontextmanager
+from functools import partial
 
 import stripe
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -53,7 +55,7 @@ class TranslateRequest(BaseModel):
 
 
 @app.post("/translate")
-def translate(req: TranslateRequest, user_id: str = Depends(get_current_user)):
+async def translate(req: TranslateRequest, user_id: str = Depends(get_current_user)):
     used, limit, _plan, _cust = get_usage(user_id)
     if used >= limit:
         raise HTTPException(
@@ -62,13 +64,18 @@ def translate(req: TranslateRequest, user_id: str = Depends(get_current_user)):
         )
 
     try:
-        result = translate_pipeline(
-            text=req.text,
-            context=req.context or "",
-            source_lang=req.source_lang,
-            target_lang=req.target_lang,
-            mode=req.mode,
-            text_offset=req.text_offset,
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            partial(
+                translate_pipeline,
+                text=req.text,
+                context=req.context or "",
+                source_lang=req.source_lang,
+                target_lang=req.target_lang,
+                mode=req.mode,
+                text_offset=req.text_offset,
+            ),
         )
     except Exception as e:
         log.error(f"[ERROR] Translation failed: {e}")
