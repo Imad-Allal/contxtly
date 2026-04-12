@@ -105,7 +105,14 @@ class SaveWordRequest(BaseModel):
 
 @app.get("/words")
 def list_words(user_id: str = Depends(get_current_user)):
-    result = get_db().table("saved_words").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+    result = (
+        get_db().table("saved_words")
+        .select("*")
+        .eq("user_id", user_id)
+        .is_("deleted_at", "null")
+        .order("created_at", desc=True)
+        .execute()
+    )
     return result.data
 
 
@@ -124,9 +131,45 @@ def save_word(req: SaveWordRequest, user_id: str = Depends(get_current_user)):
 
 @app.delete("/words/{word_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_word(word_id: str, user_id: str = Depends(get_current_user)):
-    result = get_db().table("saved_words").delete().eq("id", word_id).eq("user_id", user_id).execute()
+    from datetime import datetime, timezone
+    result = (
+        get_db().table("saved_words")
+        .update({"deleted_at": datetime.now(timezone.utc).isoformat()})
+        .eq("id", word_id)
+        .eq("user_id", user_id)
+        .is_("deleted_at", "null")
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Word not found")
+
+
+@app.get("/trash")
+def list_trash(user_id: str = Depends(get_current_user)):
+    result = (
+        get_db().table("saved_words")
+        .select("*")
+        .eq("user_id", user_id)
+        .not_.is_("deleted_at", "null")
+        .order("deleted_at", desc=True)
+        .execute()
+    )
+    return result.data
+
+
+@app.post("/trash/{word_id}/restore", status_code=status.HTTP_200_OK)
+def restore_word(word_id: str, user_id: str = Depends(get_current_user)):
+    result = (
+        get_db().table("saved_words")
+        .update({"deleted_at": None})
+        .eq("id", word_id)
+        .eq("user_id", user_id)
+        .not_.is_("deleted_at", "null")
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Word not found in trash")
+    return result.data[0]
 
 
 @app.get("/checkout")

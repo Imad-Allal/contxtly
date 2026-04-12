@@ -86,16 +86,13 @@ def describe_morphology(morph_dict: dict[str, str], include: list[str] | None = 
 @dataclass
 class LanguageAnalysis:
     """Language-neutral analysis result. Filled by language modules, consumed generically by the pipeline."""
-    translate: str | None = None           # what to send to LLM (e.g. infinitive "ausgehen")
-    lemma: str | None = None               # base form to save/display
-    word_type: str | None = None           # overrides POS-based classification
-    related: list[TokenRef] = field(
-        default_factory=list)  # tokens to highlight in UI
-    # display string (e.g. "ausgehen + von")
+    translate: str | None = None
+    lemma: str | None = None
+    word_type: str | None = None
+    related: list[TokenRef] = field(default_factory=list)
     pattern: str | None = None
-    llm_hint: str | None = None            # extra context for LLM prompt
-    modal_verb: str | None = None          # conjugated modal verb to translate (e.g., "will")
-    # (analysis, base_translation, extra_translations) -> str | None
+    llm_hint: str | None = None
+    modal_verb: str | None = None
     breakdown_fn: Callable | None = None
 
 
@@ -103,8 +100,8 @@ class LanguageAnalysis:
 class LanguageConfig:
     """Configuration for a specific language."""
 
-    code: str  # ISO 639-1 code (e.g., "de", "fr")
-    name: str  # Display name (e.g., "German", "French")
+    code: str
+    name: str
     spacy_model: str  # spaCy model name
 
 

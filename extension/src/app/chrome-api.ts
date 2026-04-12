@@ -53,6 +53,37 @@ export async function deleteWords(lemmas: string[]) {
   }
 }
 
+export async function getTrash(): Promise<Word[]> {
+  if (!isChromeExt) return [];
+  const res = await chrome.runtime.sendMessage({ action: "getTrash" });
+  if (!res || res.error) return [];
+  return res.map((row: { id: string; text: string; translation: string; data?: object; context?: string; source_url?: string }) => ({
+    id: row.id,
+    text: row.text,
+    lemma: row.text,
+    translation: row.data || row.translation,
+    url: row.source_url,
+    timestamp: undefined,
+  }));
+}
+
+export async function restoreWords(ids: string[]): Promise<Word[]> {
+  if (!isChromeExt) return [];
+  const results = await Promise.all(
+    ids.map((id) => chrome.runtime.sendMessage({ action: "restoreWord", data: { id } }))
+  );
+  return results
+    .filter((row) => row && !row.error)
+    .map((row) => ({
+      id: row.id,
+      text: row.text,
+      lemma: row.text,
+      translation: row.data || row.translation,
+      url: row.source_url,
+      timestamp: undefined,
+    }));
+}
+
 export function openUrl(url: string) {
   if (isChromeExt) {
     chrome.tabs.create({ url });
@@ -111,6 +142,46 @@ export async function getWordsFromDB(): Promise<Word[]> {
     url: row.source_url,
     timestamp: undefined,
   }));
+}
+
+// Sync DB words into browser highlights storage (for words missing locally)
+export async function syncDBWordsToHighlights(dbWords: Word[]): Promise<void> {
+  if (!isChromeExt || dbWords.length === 0) return;
+
+  const { highlights = {} } = await chrome.storage.local.get("highlights") as { highlights?: Record<string, Word[]> };
+  const h = highlights as Record<string, Word[]>;
+
+  // Build a set of all lemmas already stored locally
+  const localLemmas = new Set<string>();
+  for (const items of Object.values(h)) {
+    for (const item of items) {
+      localLemmas.add(item.lemma || item.text);
+    }
+  }
+
+  // Add DB words that are missing from local highlights
+  const SYNC_KEY = "__db_sync__";
+  if (!h[SYNC_KEY]) h[SYNC_KEY] = [];
+
+  let added = false;
+  for (const word of dbWords) {
+    const key = word.lemma || word.text;
+    if (!localLemmas.has(key)) {
+      h[SYNC_KEY].push({
+        text: word.text,
+        lemma: word.lemma || word.text,
+        translation: word.translation,
+        url: word.url,
+        timestamp: word.timestamp ?? 0,
+      });
+      localLemmas.add(key);
+      added = true;
+    }
+  }
+
+  if (added) {
+    await chrome.storage.local.set({ highlights: h });
+  }
 }
 
 export async function saveWordToDB(word: { text: string; translation: string; context?: string; source_url?: string; data?: object }): Promise<void> {

@@ -36,7 +36,6 @@ def detect_separable_verb(target_token, doc: spacy.tokens.Doc) -> tuple[str, Tok
     for token in doc:
         if token.head != target_token:
             continue
-        # Skip "zu" infinitive particle (e.g., "zu gehen") — not a separable prefix
         # spaCy tags separable "zu" as PTKVZ, infinitive "zu" as PTKZU
         if token.tag_ == "PTKZU":
             continue
@@ -75,8 +74,7 @@ def detect_separable_verb_from_prefix(target_token, doc: spacy.tokens.Doc) -> tu
         return None
 
     # The head of the particle is the verb stem
-    # Trust PTKVZ tagging even if verb is misclassified (e.g. imperatives tagged as NOUN),
-    # but only when spaCy explicitly tagged the particle (PTKVZ/svp) — not the heuristic path.
+    # Trust PTKVZ tagging even if verb is misclassified, but only when spaCy explicitly tagged the particle (PTKVZ/svp) — not the heuristic path.
     verb_token = target_token.head
     if verb_token.pos_ == "NOUN" and not is_particle:
         return None
@@ -176,15 +174,15 @@ GERMAN_MODALS = frozenset({"können", "müssen", "sollen", "dürfen", "wollen", 
 @dataclass
 class ModalVerbInfo:
     """Detected modal verb + infinitive construction."""
-    modal_text: str        # conjugated modal form (e.g., "will")
-    modal_idx: int         # character offset of modal
-    modal_lemma: str       # modal infinitive (e.g., "wollen")
-    modal_morph: dict[str, str]  # morphology of the modal
-    verb_text: str         # the main verb text (e.g., "begrenzen")
-    verb_idx: int          # character offset of the main verb
-    verb_lemma: str        # infinitive of the main verb
-    selected: str          # "modal" or "verb" — which token the user selected
-    cluster: list[tuple[str, int]] = None  # additional verbs in cluster [(text, idx), ...]
+    modal_text: str
+    modal_idx: int
+    modal_lemma: str
+    modal_morph: dict[str, str]
+    verb_text: str
+    verb_idx: int
+    verb_lemma: str
+    selected: str
+    cluster: list[tuple[str, int]] = None
 
 
 def detect_modal_verb(target, doc: spacy.tokens.Doc) -> ModalVerbInfo | None:
@@ -262,12 +260,12 @@ def detect_modal_verb(target, doc: spacy.tokens.Doc) -> ModalVerbInfo | None:
 @dataclass
 class LassenInfo:
     """Detected lassen + verb construction."""
-    verb_infinitive: str       # infinitive of the main verb (e.g., "reparieren")
-    lassen_token_text: str     # conjugated form of lassen (e.g., "lässt")
-    lassen_token_idx: int      # character offset of lassen in context
-    lassen_morph: dict[str, str]  # morphology of lassen
-    verb_token_text: str       # the main verb text (e.g., "reparieren")
-    verb_token_idx: int        # character offset of the main verb
+    verb_infinitive: str
+    lassen_token_text: str
+    lassen_token_idx: int
+    lassen_morph: dict[str, str]
+    verb_token_text: str
+    verb_token_idx: int
     has_sich: bool             # whether "sich ... lassen" (passive-reflexive)
     sich_token_text: str | None
     sich_token_idx: int | None

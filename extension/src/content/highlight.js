@@ -19,6 +19,7 @@ async function saveHighlight(originalText, translation, context) {
   const lemma = translation?.lemma || originalText;
   highlights[url].push({ text: originalText, lemma, translation, context, timestamp: Date.now() });
   await chrome.storage.local.set({ highlights });
+  await saveTranslationCache(originalText, translation);
 }
 
 export async function removeFromStorage(lemma) {
@@ -31,9 +32,16 @@ export async function removeFromStorage(lemma) {
   await chrome.storage.local.set({ highlights });
 }
 
-export async function getCachedTranslation(text, context) {
-  const found = (await getHighlights()).find((h) => h.text === text && h.context === context);
-  return found?.translation || null;
+// Translation cache — persists independently of highlights (survives deletion)
+async function saveTranslationCache(text, translation) {
+  const { translation_cache = {} } = await chrome.storage.local.get("translation_cache");
+  translation_cache[text] = translation;
+  await chrome.storage.local.set({ translation_cache });
+}
+
+export async function getCachedTranslation(text) {
+  const { translation_cache = {} } = await chrome.storage.local.get("translation_cache");
+  return translation_cache[text] || null;
 }
 
 // DOM helpers
@@ -204,20 +212,26 @@ export async function highlightSelection(range, text, translation) {
 
   await saveHighlight(text, translation, context);
 
-  // Also persist to DB if the user is logged in
+  // Queue word and flush to DB every 5 new words
   const { auth } = await chrome.storage.local.get("auth");
   if (auth?.access_token) {
+    const { pending_words = [] } = await chrome.storage.local.get("pending_words");
     const translationStr = typeof translation === "string" ? translation : (translation?.translation || "");
-    chrome.runtime.sendMessage({
-      action: "saveWord",
-      data: {
-        text,
-        translation: translationStr,
-        context,
-        source_url: location.href,
-        data: typeof translation === "object" ? translation : null,
-      },
+    pending_words.push({
+      text,
+      translation: translationStr,
+      context,
+      source_url: location.href,
+      data: typeof translation === "object" ? translation : null,
     });
+    await chrome.storage.local.set({ pending_words });
+
+    if (pending_words.length >= 5) {
+      await chrome.storage.local.set({ pending_words: [] });
+      for (const word of pending_words) {
+        chrome.runtime.sendMessage({ action: "saveWord", data: word });
+      }
+    }
   }
 }
 

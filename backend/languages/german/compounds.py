@@ -6,7 +6,6 @@ import simplemma
 DERIVATIONAL_SUFFIXES = ("ung", "heit", "keit", "schaft", "nis", "tum", "ling", "atz")
 
 # Verb stems that form nouns when combined with prefixes (without suffix)
-# e.g., aus+fallen -> Ausfall, ein+greifen -> Eingriff
 VERB_STEM_NOUNS = frozenset({
     "fall", "gang", "griff", "zug", "schlag", "bruch", "schnitt", "schluss",
     "tritt", "wurf", "ruf", "lauf", "stoß", "druck", "blick", "sprung",
@@ -53,26 +52,16 @@ def _is_derived_word(word: str, parts: list[str]) -> bool:
     second_part = parts[1].lower()
     word_lower = word.lower()
 
-    # If the right part IS a derivational suffix → derived, not compound
-    # e.g., "Gesellschaft" → "Gesell" + "Schaft" — "-schaft" is a suffix
     if second_part in DERIVATIONAL_SUFFIXES:
         return True
 
-    # If ends with derivational suffix AND first part is a verb prefix → derived
     if any(word_lower.endswith(suffix) for suffix in DERIVATIONAL_SUFFIXES):
         if first_part in VERB_PREFIXES:
             return True
 
-    # Nominalized infinitives: prefix + verb infinitive ending in "en"
-    # e.g., "Vorhaben" (vor + haben), "Einkommen" (ein + kommen)
-    # These are NOT compounds but nominalized verbs
-    # Check: second part must also end in "en" (the verb infinitive part)
-    # This distinguishes "Vorhaben" (vor+haben) from "Vorgarten" (vor+Garten)
     if word_lower.endswith("en") and first_part in VERB_PREFIXES and second_part.endswith("en"):
         return True
 
-    # Verb stem nouns: prefix + verb stem (no suffix)
-    # e.g., "Ausfall" (aus + fallen -> fall), "Eingriff" (ein + greifen -> griff)
     if first_part in VERB_PREFIXES and second_part in VERB_STEM_NOUNS:
         return True
 
@@ -88,11 +77,7 @@ def _is_fugen_s(word: str) -> bool:
         return False
     lemma = simplemma.lemmatize(word, lang="de")
     if lemma.lower() != word.lower():
-        # Simplemma recognizes this as inflected → the 's' is a Fugenlaut
         return True
-    # Fallback: simplemma returned word unchanged — could be unknown linking form
-    # If the word itself is NOT known but the stripped form IS, it's likely Fugen-s
-    # e.g., "Geburts" (unknown) → "Geburt" (known)
     if not simplemma.is_known(word, lang="de") and simplemma.is_known(stripped, lang="de"):
         return True
     return False
@@ -112,13 +97,11 @@ def _has_fugenlaut(left: str) -> bool:
 def _clean_compound_part(part: str) -> str:
     """Remove linking elements from compound parts (Fugenelement)."""
     part_lower = part.lower()
-    # Try structured linking patterns first (more specific, e.g., "ungs"→"ung", "es"→"")
     pattern_result = None
     for link, base in LINKING_PATTERNS:
         if part_lower.endswith(link) and len(part) > len(link) + 2:
             pattern_result = part[:-len(link)] + base
             break
-    # Try bare Fugen-s (e.g., "Liebes"→"Liebe", "Einkaufs"→"Einkauf")
     fugen_s_result = part[:-1] if _is_fugen_s(part) else None
     if pattern_result and fugen_s_result:
         lemma = simplemma.lemmatize(fugen_s_result, lang="de")
@@ -185,8 +168,7 @@ def _split_once(word: str, min_score: float = 0.4, prefer_participle: bool = Fal
 
     best = valid_results[0]
 
-    # When the best split doesn't have a Fugenlaut but a close runner-up does,
-    # prefer the Fugenlaut split (e.g., "Einkaufs+Trip" over "Einkauf+Strip")
+    # When the best split doesn't have a Fugenlaut but a close runner-up does, prefer it
     if len(valid_results) > 1 and not _has_fugenlaut(best[1]):
         for r in valid_results[1:]:
             if best[0] - r[0] > 0.5:
@@ -205,7 +187,7 @@ def split_compound(word: str, _depth: int = 0) -> list[str] | None:
     long enough to handle multi-part compounds like "Krankenversicherungssystem".
 
     Args:
-        word: The word to split (e.g., "Krankenhaus")
+        word: The word to split
         _depth: Internal recursion depth counter
 
     Returns:

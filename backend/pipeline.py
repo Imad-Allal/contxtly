@@ -18,9 +18,9 @@ class TranslationResult:
     meaning: str | None = None
     breakdown: str | None = None
     context_translation: dict | None = None  # {"source": original context, "target": translated context}
-    lemma: str | None = None  # Base form of the word (e.g., "strittig" for "strittige")
-    related_words: list[dict] | None = None  # Other parts to highlight [{text, offset}, ...] (e.g., for "ausgehen": [{text:"von", offset:42}, {text:"aus", offset:70}])
-    collocation_pattern: str | None = None  # Full pattern for display (e.g., "ausgehen + von")
+    lemma: str | None = None
+    related_words: list[dict] | None = None
+    collocation_pattern: str | None = None
     word_type: str | None = None  # simple, conjugated_verb, plural_noun, noun, separable_prefix, collocation_verb, collocation_prep, fixed_expression, compound
 
     def to_dict(self) -> dict:
@@ -117,7 +117,7 @@ def translate_pipeline(
     if la:
         log.info(f"         - Lang analysis: translate={la.translate}, pattern={la.pattern}")
 
-    # What to translate: language analysis may override (e.g. collocation verb, separable infinitive)
+    # What to translate: language analysis may override
     word_to_translate = (la.translate if la else None) or text
 
     # Try to split compound words (NOUN, PROPN, ADJ - German has compound adjectives too)
@@ -133,7 +133,7 @@ def translate_pipeline(
     log.info(f"[STEP 2] Smart translating with LLM: '{word_to_translate}'...")
     # Skip separate lemma translation when lang_analysis already provides the translate word
     lemma_to_translate = None if (la and la.translate) else (analysis.lemma if analysis.lemma != text else None)
-    # LLM hint for better translation (e.g. collocation pattern)
+    # LLM hint for better translation
     llm_hint = la.llm_hint if la else None
     modal_verb = la.modal_verb if la else None
     with TimingBlock("Step 2: translate_smart"):
@@ -193,7 +193,7 @@ def translate_pipeline(
     # Related words for frontend highlighting
     related_words = [r.to_dict() for r in la.related] if la and la.related else []
 
-    # Display pattern for frontend (e.g. "ausgehen + von")
+    # Display pattern for frontend
     collocation_pattern = la.pattern if la else None
 
     # Store in cache

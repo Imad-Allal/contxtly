@@ -62,6 +62,14 @@ async function handleGetWords() {
   return apiFetch("/words");
 }
 
+async function handleGetTrash() {
+  return apiFetch("/trash");
+}
+
+async function handleRestoreWord({ id }) {
+  return apiFetch(`/trash/${id}/restore`, { method: "POST" });
+}
+
 async function handleGetCheckoutUrl() {
   return apiFetch("/checkout");
 }
@@ -85,6 +93,8 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     saveWord:       () => handleSaveWord(request.data),
     deleteWord:     () => handleDeleteWord(request.data),
     getWords:       () => handleGetWords(),
+    getTrash:       () => handleGetTrash(),
+    restoreWord:    () => handleRestoreWord(request.data),
     getCheckoutUrl: () => handleGetCheckoutUrl(),
     getPortalUrl:   () => handleGetPortalUrl(),
     login:          () => login(),

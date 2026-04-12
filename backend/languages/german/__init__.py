@@ -31,8 +31,6 @@ class German(LanguageModule):
             if not any(last_part.endswith(e) for e in ("end", "ende", "enden", "ender", "endem", "endes")):
                 return None
             # Check the verb stem (part minus ending) is long enough to be a real verb
-            # e.g., "begleitend" has stem "begleit" (7 chars) = valid
-            # but "Tenden" has stem "T" (1 char) = invalid split
             for ending in ("enden", "ender", "endem", "endes", "ende", "end"):
                 if last_part.endswith(ending):
                     stem_len = len(last_part) - len(ending)

@@ -10,9 +10,9 @@ from languages.german.verbs import REFLEXIVE_PRONOUNS
 
 @dataclass
 class CollocationInfo:
-    """Internal: verb+preposition collocation info (e.g., "von etwas ausgehen")."""
-    verb: str           # e.g., "ausgehen"
-    pattern: str        # e.g., "von etwas ausgehen"
+    """Internal: verb+preposition collocation info."""
+    verb: str
+    pattern: str
     related: list[TokenRef]
 
 

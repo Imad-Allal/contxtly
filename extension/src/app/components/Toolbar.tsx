@@ -10,11 +10,13 @@ interface ToolbarProps {
   onToggleSelectAll: () => void;
   selectedCount: number;
   onDelete: () => void;
+  onOpenTrash: () => void;
 }
 
 export function Toolbar({
   search, onSearchChange, isExporting, onExport,
   allSelected, onToggleSelectAll, selectedCount, onDelete,
+  onOpenTrash,
 }: ToolbarProps) {
   return (
     <div
@@ -79,7 +81,18 @@ export function Toolbar({
         {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
       </motion.button>
 
-      {/* Delete */}
+      {/* Open trash */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={onOpenTrash}
+        title="View trash"
+        className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:bg-red-50 hover:border-red-200 hover:text-red-400 transition-all"
+      >
+        <Trash2 size={14} />
+      </motion.button>
+
+      {/* Delete selected */}
       <AnimatePresence>
         {selectedCount > 0 && (
           <motion.button

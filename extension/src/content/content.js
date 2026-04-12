@@ -159,9 +159,11 @@ async function translate(text, context, textOffset, range, x, y) {
   showTooltip(x, y);
 
   try {
-    const cached = await getCachedTranslation(text, context);
+    const cached = await getCachedTranslation(text);
     if (cached) {
-      return updateTooltip(cached, false, createDeleteHandler(text));
+      updateTooltip(cached, false, createDeleteHandler(cached.lemma || text));
+      await highlightSelection(range, text, cached);
+      return;
     }
 
     const res = await chrome.runtime.sendMessage({ action: "translate", data: { text, context, text_offset: textOffset } });

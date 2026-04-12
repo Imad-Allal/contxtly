@@ -14,12 +14,14 @@ export interface TranslationData {
 }
 
 export interface Word {
+  id?: string;
   text: string;
   lemma?: string;
   translation: TranslationData | string;
   url?: string;
   timestamp?: number;
 }
+
 
 export type TranslationDetail =
   | { label: string; color: string; text: string; source?: undefined }
