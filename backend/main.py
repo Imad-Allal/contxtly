@@ -157,6 +157,20 @@ def list_trash(user_id: str = Depends(get_current_user)):
     return result.data
 
 
+@app.delete("/trash/{word_id}", status_code=status.HTTP_204_NO_CONTENT)
+def purge_word(word_id: str, user_id: str = Depends(get_current_user)):
+    result = (
+        get_db().table("saved_words")
+        .delete()
+        .eq("id", word_id)
+        .eq("user_id", user_id)
+        .filter("deleted_at", "not.is", "null")
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Word not found in trash")
+
+
 @app.post("/trash/{word_id}/restore", status_code=status.HTTP_200_OK)
 def restore_word(word_id: str, user_id: str = Depends(get_current_user)):
     result = (

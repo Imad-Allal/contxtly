@@ -81,31 +81,22 @@ export function Toolbar({
         {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
       </motion.button>
 
-      {/* Open trash */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onOpenTrash}
-        title="View trash"
-        className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-500 transition-all"
-      >
-        <ArchiveX size={14} />
-      </motion.button>
-
-      {/* Delete selected */}
-      <AnimatePresence>
-        {selectedCount > 0 && (
+      {/* Archive (trash view) — swaps to delete button when words are selected */}
+      <AnimatePresence mode="wait">
+        {selectedCount > 0 ? (
           <motion.button
-            initial={{ opacity: 0, scale: 0.7, width: 0 }}
-            animate={{ opacity: 1, scale: 1, width: 32 }}
-            exit={{ opacity: 0, scale: 0.7, width: 0 }}
+            key="delete"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.7 }}
+            transition={{ duration: 0.15 }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onDelete}
             title={`Delete ${selectedCount} selected`}
-            className="relative h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-red-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all overflow-visible flex-shrink-0"
+            className="relative w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-red-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all overflow-visible flex-shrink-0"
           >
-            <Trash2 size={13} />
+            <Trash2 size={14} />
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -113,6 +104,21 @@ export function Toolbar({
             >
               {selectedCount}
             </motion.span>
+          </motion.button>
+        ) : (
+          <motion.button
+            key="archive"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.7 }}
+            transition={{ duration: 0.15 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onOpenTrash}
+            title="View trash"
+            className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-500 transition-all"
+          >
+            <ArchiveX size={14} />
           </motion.button>
         )}
       </AnimatePresence>

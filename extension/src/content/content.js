@@ -1,5 +1,5 @@
 import { showButton, removeButton, showTooltip, updateTooltip, updateTooltipLogin, updateTooltipLimitReached, removeTooltip, isOwnElement } from "./ui.js";
-import { highlightSelection, getCachedTranslation, removeFromStorage, removeHighlightFromDOM } from "./highlight.js";
+import { highlightSelection, applyHighlightToDOM, getCachedTranslation, removeFromStorage, removeHighlightFromDOM } from "./highlight.js";
 
 const MAX_LENGTH = 500;
 const LETTER_OR_NUM = /\p{L}|\p{N}/u;
@@ -162,7 +162,7 @@ async function translate(text, context, textOffset, range, x, y) {
     const cached = await getCachedTranslation(text);
     if (cached) {
       updateTooltip(cached, false, createDeleteHandler(cached.lemma || text));
-      await highlightSelection(range, text, cached);
+      applyHighlightToDOM(range, text, cached);
       return;
     }
 

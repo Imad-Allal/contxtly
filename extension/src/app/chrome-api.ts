@@ -67,12 +67,17 @@ export async function getTrash(): Promise<Word[]> {
   }));
 }
 
+export async function purgeWords(ids: string[]): Promise<void> {
+  if (!isChromeExt) return;
+  await Promise.all(ids.map((id) => chrome.runtime.sendMessage({ action: "purgeWord", data: { id } })));
+}
+
 export async function restoreWords(ids: string[]): Promise<Word[]> {
   if (!isChromeExt) return [];
   const results = await Promise.all(
     ids.map((id) => chrome.runtime.sendMessage({ action: "restoreWord", data: { id } }))
   );
-  return results
+  const restored = results
     .filter((row) => row && !row.error)
     .map((row) => ({
       id: row.id,
@@ -82,6 +87,23 @@ export async function restoreWords(ids: string[]): Promise<Word[]> {
       url: row.source_url,
       timestamp: undefined,
     }));
+
+  // Broadcast to all tabs so the word gets re-highlighted on any open page
+  const tabs = await chrome.tabs.query({});
+  for (const word of restored) {
+    for (const tab of tabs) {
+      if (tab.id) {
+        chrome.tabs.sendMessage(tab.id, {
+          action: "addHighlight",
+          text: word.text,
+          translation: word.translation,
+          context: "",
+        }).catch(() => {});
+      }
+    }
+  }
+
+  return restored;
 }
 
 export function openUrl(url: string) {

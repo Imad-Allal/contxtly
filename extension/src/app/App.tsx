@@ -4,7 +4,7 @@ import { Languages, LogIn, Trash2, ArrowLeft, Undo2 } from "lucide-react";
 import {
   loadWords, deleteWords, deleteWordFromDB,
   getWordsFromDB, syncDBWordsToHighlights,
-  getTrash, restoreWords,
+  getTrash, restoreWords, purgeWords,
   openUrl,
 } from "./chrome-api";
 import { useSettings } from "./hooks/useSettings";
@@ -109,6 +109,18 @@ export default function App() {
     }
 
     // Refresh trash list
+    const updatedTrash = await getTrash();
+    setTrashWords(updatedTrash);
+    clearTrashSelection();
+  }, [trashWords, trashSelected, clearTrashSelection]);
+
+  const handlePermanentDelete = useCallback(async () => {
+    const ids = trashWords
+      .filter((w) => trashSelected.has(getWordKey(w)) && w.id)
+      .map((w) => w.id!);
+    if (ids.length === 0) return;
+
+    await purgeWords(ids);
     const updatedTrash = await getTrash();
     setTrashWords(updatedTrash);
     clearTrashSelection();
@@ -222,25 +234,46 @@ export default function App() {
                 </motion.button>
                 <AnimatePresence>
                   {trashSelected.size > 0 && (
-                    <motion.button
-                      initial={{ opacity: 0, scale: 0.7, width: 0 }}
-                      animate={{ opacity: 1, scale: 1, width: 32 }}
-                      exit={{ opacity: 0, scale: 0.7, width: 0 }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleRestore}
-                      title={`Restore ${trashSelected.size} selected`}
-                      className="relative h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-amber-500 hover:bg-amber-50 hover:border-amber-200 transition-all overflow-visible flex-shrink-0"
-                    >
-                      <Undo2 size={13} />
-                      <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-1.5 -right-1.5 w-[15px] h-[15px] rounded-full bg-amber-400 text-white text-[9px] font-bold flex items-center justify-center border border-white"
+                    <>
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.7, width: 0 }}
+                        animate={{ opacity: 1, scale: 1, width: 32 }}
+                        exit={{ opacity: 0, scale: 0.7, width: 0 }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleRestore}
+                        title={`Restore ${trashSelected.size} selected`}
+                        className="relative h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-amber-500 hover:bg-amber-50 hover:border-amber-200 transition-all overflow-visible flex-shrink-0"
                       >
-                        {trashSelected.size}
-                      </motion.span>
-                    </motion.button>
+                        <Undo2 size={13} />
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute -top-1.5 -right-1.5 w-[15px] h-[15px] rounded-full bg-amber-400 text-white text-[9px] font-bold flex items-center justify-center border border-white"
+                        >
+                          {trashSelected.size}
+                        </motion.span>
+                      </motion.button>
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.7, width: 0 }}
+                        animate={{ opacity: 1, scale: 1, width: 32 }}
+                        exit={{ opacity: 0, scale: 0.7, width: 0 }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handlePermanentDelete}
+                        title={`Permanently delete ${trashSelected.size} selected`}
+                        className="relative h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-red-400 hover:bg-red-50 hover:border-red-200 transition-all overflow-visible flex-shrink-0"
+                      >
+                        <Trash2 size={13} />
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute -top-1.5 -right-1.5 w-[15px] h-[15px] rounded-full bg-red-400 text-white text-[9px] font-bold flex items-center justify-center border border-white"
+                        >
+                          {trashSelected.size}
+                        </motion.span>
+                      </motion.button>
+                    </>
                   )}
                 </AnimatePresence>
               </div>

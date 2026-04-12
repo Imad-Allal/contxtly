@@ -70,6 +70,10 @@ async function handleRestoreWord({ id }) {
   return apiFetch(`/trash/${id}/restore`, { method: "POST" });
 }
 
+async function handlePurgeWord({ id }) {
+  return apiFetch(`/trash/${id}`, { method: "DELETE" });
+}
+
 async function handleGetCheckoutUrl() {
   return apiFetch("/checkout");
 }
@@ -95,6 +99,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     getWords:       () => handleGetWords(),
     getTrash:       () => handleGetTrash(),
     restoreWord:    () => handleRestoreWord(request.data),
+    purgeWord:      () => handlePurgeWord(request.data),
     getCheckoutUrl: () => handleGetCheckoutUrl(),
     getPortalUrl:   () => handleGetPortalUrl(),
     login:          () => login(),

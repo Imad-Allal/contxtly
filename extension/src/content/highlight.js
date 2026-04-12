@@ -164,17 +164,18 @@ function highlightRelatedWord(block, relatedWord, translation, context) {
   }
 }
 
-// Highlight selection
-export async function highlightSelection(range, text, translation) {
+// Apply highlight marks to DOM only — no storage, no DB. Used for cache hits and restores.
+export function applyHighlightToDOM(range, text, translation) {
   if (!range) return;
 
   const container = range.commonAncestorContainer;
   const parent = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
   const existing = parent?.closest?.(`.${CLASS}`);
 
+  // Already highlighted
   if (existing?.textContent === text) return;
 
-  // Unwrap overlapping highlights
+  // Unwrap any overlapping highlights first
   if (existing || parent?.querySelector?.(`.${CLASS}`)) {
     const root = parent?.closest("p, div, li, td, article, section") || document.body;
     for (const mark of root.querySelectorAll(`.${CLASS}`)) {
@@ -189,7 +190,6 @@ export async function highlightSelection(range, text, translation) {
     }
   }
 
-  const context = getContext(range, text);
   const block = parent?.closest("p, div, li, td, article, section") || document.body;
 
   try {
@@ -204,15 +204,24 @@ export async function highlightSelection(range, text, translation) {
     } catch {}
   }
 
-  // Highlight related words (other parts of separable verb or collocation)
+  // Highlight related words (collocations, separable verb parts, etc.)
   const ctxSentence = translation?.context_translation?.source || "";
   for (const word of translation?.related_words || []) {
     highlightRelatedWord(block, word, translation, ctxSentence);
   }
+}
+
+// Highlight selection — applies to DOM then persists to storage and DB
+export async function highlightSelection(range, text, translation) {
+  if (!range) return;
+
+  applyHighlightToDOM(range, text, translation);
+
+  const context = getContext(range, text);
 
   await saveHighlight(text, translation, context);
 
-  // Save to DB and store returned id into the highlight entry (needed for deletion)
+  // Save to DB and store returned id back into the local highlight (needed for deletion)
   const { auth } = await chrome.storage.local.get("auth");
   if (auth?.access_token) {
     const translationStr = typeof translation === "string" ? translation : (translation?.translation || "");
@@ -226,7 +235,6 @@ export async function highlightSelection(range, text, translation) {
         data: typeof translation === "object" ? translation : null,
       },
     });
-    // Store the DB id back into the local highlight so we can delete by id later
     if (saved?.id) {
       const url = getUrl();
       const { highlights = {} } = await chrome.storage.local.get("highlights");
@@ -240,7 +248,7 @@ export async function highlightSelection(range, text, translation) {
   }
 }
 
-// Restore on page load
+// Restore a single highlight including its related words
 function restoreHighlight(text, translation, context) {
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
     acceptNode: (n) => n.parentElement.closest(SKIP) ? NodeFilter.FILTER_REJECT :
@@ -260,6 +268,14 @@ function restoreHighlight(text, translation, context) {
       range.setStart(node, idx);
       range.setEnd(node, idx + text.length);
       range.surroundContents(createMark(translation, text));
+
+      // Also restore related words (collocations, separable verbs, etc.)
+      if (block) {
+        const ctxSentence = translation?.context_translation?.source || "";
+        for (const word of translation?.related_words || []) {
+          highlightRelatedWord(block, word, translation, ctxSentence);
+        }
+      }
       return;
     } catch {}
   }
@@ -274,7 +290,6 @@ async function restore() {
 // Message listener
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.action === "removeHighlight") {
-    // Remove highlights by lemma
     const targetLemma = msg.lemma || msg.text;
     document.querySelectorAll(`.${CLASS}`).forEach((mark) => {
       let data = mark.dataset.translation;
@@ -282,6 +297,12 @@ chrome.runtime.onMessage.addListener((msg) => {
       const markLemma = data?.lemma || mark.textContent;
       if (markLemma === targetLemma) unwrap(mark);
     });
+  }
+
+  if (msg.action === "addHighlight") {
+    // Re-highlight a restored word on this page
+    const { text, translation, context } = msg;
+    restoreHighlight(text, translation, context || "");
   }
 });
 
