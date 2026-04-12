@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Layers, Square, CheckSquare, Trash2 } from "lucide-react";
+import { Search, X, Layers, Square, CheckSquare, Trash2, ArchiveX } from "lucide-react";
 
 interface ToolbarProps {
   search: string;
@@ -87,9 +87,9 @@ export function Toolbar({
         whileTap={{ scale: 0.95 }}
         onClick={onOpenTrash}
         title="View trash"
-        className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:bg-red-50 hover:border-red-200 hover:text-red-400 transition-all"
+        className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-500 transition-all"
       >
-        <Trash2 size={14} />
+        <ArchiveX size={14} />
       </motion.button>
 
       {/* Delete selected */}

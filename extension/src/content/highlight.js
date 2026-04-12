@@ -212,24 +212,29 @@ export async function highlightSelection(range, text, translation) {
 
   await saveHighlight(text, translation, context);
 
-  // Queue word and flush to DB every 5 new words
+  // Save to DB and store returned id into the highlight entry (needed for deletion)
   const { auth } = await chrome.storage.local.get("auth");
   if (auth?.access_token) {
-    const { pending_words = [] } = await chrome.storage.local.get("pending_words");
     const translationStr = typeof translation === "string" ? translation : (translation?.translation || "");
-    pending_words.push({
-      text,
-      translation: translationStr,
-      context,
-      source_url: location.href,
-      data: typeof translation === "object" ? translation : null,
+    const saved = await chrome.runtime.sendMessage({
+      action: "saveWord",
+      data: {
+        text,
+        translation: translationStr,
+        context,
+        source_url: location.href,
+        data: typeof translation === "object" ? translation : null,
+      },
     });
-    await chrome.storage.local.set({ pending_words });
-
-    if (pending_words.length >= 5) {
-      await chrome.storage.local.set({ pending_words: [] });
-      for (const word of pending_words) {
-        chrome.runtime.sendMessage({ action: "saveWord", data: word });
+    // Store the DB id back into the local highlight so we can delete by id later
+    if (saved?.id) {
+      const url = getUrl();
+      const { highlights = {} } = await chrome.storage.local.get("highlights");
+      const entries = highlights[url] || [];
+      const entry = entries.find((h) => h.text === text);
+      if (entry) {
+        entry.id = saved.id;
+        await chrome.storage.local.set({ highlights });
       }
     }
   }

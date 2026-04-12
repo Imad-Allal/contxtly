@@ -40,20 +40,30 @@ export default function App() {
   const { selected: trashSelected, allSelected: allTrashSelected, toggleSelect: toggleTrashSelect, toggleSelectAll: toggleTrashSelectAll, clearSelection: clearTrashSelection } = useWordSelection(filteredTrash);
   const { expandedWords: trashExpanded, toggleExpand: toggleTrashExpand } = useExpandedWords();
 
-  // Load words: browser storage first (instant), fall back to DB if empty
+  // Load words: browser storage first (instant), then attach DB ids in background
   useEffect(() => {
     if (auth.loading || !auth.loggedIn) return;
 
     async function loadAndSync() {
       const browserWords = await loadWords();
+
       if (browserWords.length > 0) {
+        // Show browser words immediately, then fetch DB ids to attach
         setWords(browserWords);
+        const dbWords = await getWordsFromDB();
+        const idByText = new Map(dbWords.map((w) => [w.text, w.id]));
+        setWords((prev) =>
+          prev.map((w) => ({ ...w, id: w.id ?? idByText.get(w.text) }))
+        );
       } else {
+        // Browser empty — fetch from DB, store locally, then display
         const dbWords = await getWordsFromDB();
         if (dbWords.length > 0) {
           await syncDBWordsToHighlights(dbWords);
           const synced = await loadWords();
-          setWords(synced);
+          // DB words already have ids
+          const idByText = new Map(dbWords.map((w) => [w.text, w.id]));
+          setWords(synced.map((w) => ({ ...w, id: w.id ?? idByText.get(w.text) })));
         }
       }
     }
