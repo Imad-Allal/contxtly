@@ -57,6 +57,25 @@ def _find_collocation(target, verb_token, prep_token, doc):
     return None
 
 
+# Pronominal adverbs: da(r)+prep → extract the prep
+_DA_PREPS = {
+    "daran": "an", "dabei": "bei", "dadurch": "durch", "dafür": "für",
+    "dagegen": "gegen", "dahinter": "hinter", "damit": "mit", "danach": "nach",
+    "daneben": "neben", "darauf": "auf", "daraus": "aus", "darin": "in",
+    "darüber": "über", "darum": "um", "darunter": "unter", "davon": "von",
+    "davor": "vor", "dazu": "zu", "dazwischen": "zwischen",
+}
+
+
+def _extract_da_prep(doc):
+    """Return the preposition string hidden in a da+prep token, or None."""
+    for t in doc:
+        prep = _DA_PREPS.get(t.text.lower())
+        if prep:
+            return prep
+    return None
+
+
 def detect_verb_preposition_collocation(
     target, doc: spacy.tokens.Doc
 ) -> CollocationInfo | None:
@@ -73,7 +92,24 @@ def detect_verb_preposition_collocation(
         prep_token = next((t for t in doc if t.pos_ == "ADP" and t.tag_ != "PTKVZ"), None)
     elif target.pos_ == "VERB":
         verb_token = target
-        prep_token = next((t for t in doc if t.pos_ == "ADP" and t.tag_ != "PTKVZ"), None)
+        prep_token = next(
+            (t for t in doc if t.pos_ == "ADP" and t.tag_ != "PTKVZ" and t.head == verb_token),
+            None,
+        )
+        if prep_token is None and target.tag_ == "VVFIN":
+            da_prep = _extract_da_prep(doc)
+            if da_prep:
+                # Synthesize a fake prep string for lookup only
+                verb_token = target
+                # Use _find_collocation directly with the extracted prep string
+                prefix = next((t for t in doc if t.head == verb_token and t.tag_ == "PTKVZ"), None)
+                full_lemma = (prefix.text.lower() + verb_token.lemma_) if prefix else verb_token.lemma_
+                for lemma in (full_lemma, verb_token.lemma_):
+                    if (lemma, da_prep) in VERB_PREPOSITION_COLLOCATIONS:
+                        pattern = VERB_PREPOSITION_COLLOCATIONS[(lemma, da_prep)]
+                        related = [TokenRef(t.text, t.idx) for t in [prefix] if t and t != target]
+                        return CollocationInfo(lemma, pattern, related)
+                return None
     elif target.pos_ == "ADP":
         prep_token = target
         verb_token = next((t for t in doc if t.pos_ == "VERB"), None)

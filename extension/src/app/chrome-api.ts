@@ -3,20 +3,64 @@ import type { Word } from "./types";
 export const isChromeExt =
   typeof chrome !== "undefined" && !!chrome?.runtime?.id;
 
+// ── Words (active) ────────────────────────────────────────────────────────────
+
+/** Load active words from wordStore (instant, no DB call). */
 export async function loadWords(): Promise<Word[]> {
   if (!isChromeExt) return [];
-
-  const { highlights = {} } = await chrome.storage.local.get("highlights");
-  const seen = new Set<string>();
-
-  return Object.entries(highlights as Record<string, Word[]>)
-    .flatMap(([url, items]) => items.map((h) => ({ ...h, url })))
-    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-    .filter((h) => {
-      const key = h.lemma || h.text;
-      return !seen.has(key) && seen.add(key);
-    });
+  const { words = [] } = await chrome.storage.local.get("words") as { words?: Word[] };
+  return words;
 }
+
+/**
+ * On startup: if wordStore is empty, fetch from DB and seed it.
+ * Also seeds archives from DB trash.
+ * Called once when the panel opens and auth is confirmed.
+ */
+export async function syncFromDBIfEmpty(): Promise<void> {
+  if (!isChromeExt) return;
+  await chrome.runtime.sendMessage({ action: "syncFromDBIfEmpty" });
+}
+
+/**
+ * Archive (soft-delete) words by lemma.
+ * Removes from wordStore, moves to archives, broadcasts DOM removal,
+ * fires DB soft-delete async.
+ */
+export async function archiveWords(lemmas: string[]): Promise<void> {
+  if (!isChromeExt) return;
+  await chrome.runtime.sendMessage({ action: "archiveWords", data: { lemmas } });
+}
+
+// ── Archives ──────────────────────────────────────────────────────────────────
+
+/** Load archived words from wordStore (instant, no DB call). */
+export async function loadArchives(): Promise<Word[]> {
+  if (!isChromeExt) return [];
+  const { archives = [] } = await chrome.storage.local.get("archives") as { archives?: Word[] };
+  return archives;
+}
+
+/**
+ * Restore archived words by lemma.
+ * Moves from archives → words in wordStore, broadcasts DOM re-highlight,
+ * fires DB restore async.
+ */
+export async function restoreWords(lemmas: string[]): Promise<void> {
+  if (!isChromeExt) return;
+  await chrome.runtime.sendMessage({ action: "restoreWords", data: { lemmas } });
+}
+
+/**
+ * Permanently delete words from archives by lemma.
+ * Removes from archives in wordStore, fires DB hard-delete async.
+ */
+export async function purgeWords(lemmas: string[]): Promise<void> {
+  if (!isChromeExt) return;
+  await chrome.runtime.sendMessage({ action: "purgeWords", data: { lemmas } });
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
 
 export async function loadSettings(): Promise<{ targetLang: string; mode: string }> {
   if (!isChromeExt) return { targetLang: "en", mode: "smart" };
@@ -28,91 +72,7 @@ export function saveSettings(data: { targetLang: string; mode: string }) {
   chrome.runtime.sendMessage({ action: "saveSettings", data });
 }
 
-export async function deleteWords(lemmas: string[]) {
-  if (!isChromeExt) return;
-
-  const { highlights = {} } = await chrome.storage.local.get("highlights");
-  const h = highlights as Record<string, Word[]>;
-
-  for (const url of Object.keys(h)) {
-    h[url] = h[url].filter((w) => !lemmas.includes(w.lemma || w.text));
-    if (!h[url].length) delete h[url];
-  }
-
-  await chrome.storage.local.set({ highlights: h });
-
-  const tabs = await chrome.tabs.query({});
-  for (const tab of tabs) {
-    if (tab.id) {
-      lemmas.forEach((lemma) =>
-        chrome.tabs
-          .sendMessage(tab.id!, { action: "removeHighlight", lemma })
-          .catch(() => {})
-      );
-    }
-  }
-}
-
-export async function getTrash(): Promise<Word[]> {
-  if (!isChromeExt) return [];
-  const res = await chrome.runtime.sendMessage({ action: "getTrash" });
-  if (!res || res.error) return [];
-  return res.map((row: { id: string; text: string; translation: string; data?: object; context?: string; source_url?: string }) => ({
-    id: row.id,
-    text: row.text,
-    lemma: row.text,
-    translation: row.data || row.translation,
-    url: row.source_url,
-    timestamp: undefined,
-  }));
-}
-
-export async function purgeWords(ids: string[]): Promise<void> {
-  if (!isChromeExt) return;
-  await Promise.all(ids.map((id) => chrome.runtime.sendMessage({ action: "purgeWord", data: { id } })));
-}
-
-export async function restoreWords(ids: string[]): Promise<Word[]> {
-  if (!isChromeExt) return [];
-  const results = await Promise.all(
-    ids.map((id) => chrome.runtime.sendMessage({ action: "restoreWord", data: { id } }))
-  );
-  const restored = results
-    .filter((row) => row && !row.error)
-    .map((row) => ({
-      id: row.id,
-      text: row.text,
-      lemma: row.text,
-      translation: row.data || row.translation,
-      url: row.source_url,
-      timestamp: undefined,
-    }));
-
-  // Broadcast to all tabs so the word gets re-highlighted on any open page
-  const tabs = await chrome.tabs.query({});
-  for (const word of restored) {
-    for (const tab of tabs) {
-      if (tab.id) {
-        chrome.tabs.sendMessage(tab.id, {
-          action: "addHighlight",
-          text: word.text,
-          translation: word.translation,
-          context: "",
-        }).catch(() => {});
-      }
-    }
-  }
-
-  return restored;
-}
-
-export function openUrl(url: string) {
-  if (isChromeExt) {
-    chrome.tabs.create({ url });
-  } else {
-    window.open(url, "_blank");
-  }
-}
+// ── Auth ──────────────────────────────────────────────────────────────────────
 
 export async function getAuthSession(): Promise<{ access_token: string } | null> {
   if (!isChromeExt) return null;
@@ -129,6 +89,8 @@ export async function logout(): Promise<void> {
   if (!isChromeExt) return;
   await chrome.runtime.sendMessage({ action: "logout" });
 }
+
+// ── Usage / billing ───────────────────────────────────────────────────────────
 
 export async function getUsage(): Promise<{ used: number; limit: number; plan: string } | null> {
   if (!isChromeExt) return null;
@@ -151,69 +113,14 @@ export async function getCheckoutUrl(): Promise<string | null> {
   return res?.url || null;
 }
 
-export async function getWordsFromDB(): Promise<Word[]> {
-  if (!isChromeExt) return [];
-  const res = await chrome.runtime.sendMessage({ action: "getWords" });
-  if (!res || res.error) return [];
-  // Map DB rows to the Word shape the UI expects
-  return res.map((row: { id: string; text: string; translation: string; data?: object; context?: string; source_url?: string }) => ({
-    id: row.id,
-    text: row.text,
-    lemma: row.text,
-    translation: row.data || row.translation,
-    url: row.source_url,
-    timestamp: undefined,
-  }));
-}
+// ── Misc ──────────────────────────────────────────────────────────────────────
 
-// Sync DB words into browser highlights storage (for words missing locally)
-export async function syncDBWordsToHighlights(dbWords: Word[]): Promise<void> {
-  if (!isChromeExt || dbWords.length === 0) return;
-
-  const { highlights = {} } = await chrome.storage.local.get("highlights") as { highlights?: Record<string, Word[]> };
-  const h = highlights as Record<string, Word[]>;
-
-  // Build a set of all lemmas already stored locally
-  const localLemmas = new Set<string>();
-  for (const items of Object.values(h)) {
-    for (const item of items) {
-      localLemmas.add(item.lemma || item.text);
-    }
+export function openUrl(url: string) {
+  if (isChromeExt) {
+    chrome.tabs.create({ url });
+  } else {
+    window.open(url, "_blank");
   }
-
-  // Add DB words that are missing from local highlights
-  const SYNC_KEY = "__db_sync__";
-  if (!h[SYNC_KEY]) h[SYNC_KEY] = [];
-
-  let added = false;
-  for (const word of dbWords) {
-    const key = word.lemma || word.text;
-    if (!localLemmas.has(key)) {
-      h[SYNC_KEY].push({
-        text: word.text,
-        lemma: word.lemma || word.text,
-        translation: word.translation,
-        url: word.url,
-        timestamp: word.timestamp ?? 0,
-      });
-      localLemmas.add(key);
-      added = true;
-    }
-  }
-
-  if (added) {
-    await chrome.storage.local.set({ highlights: h });
-  }
-}
-
-export async function saveWordToDB(word: { text: string; translation: string; context?: string; source_url?: string; data?: object }): Promise<void> {
-  if (!isChromeExt) return;
-  await chrome.runtime.sendMessage({ action: "saveWord", data: word });
-}
-
-export async function deleteWordFromDB(id: string): Promise<void> {
-  if (!isChromeExt) return;
-  await chrome.runtime.sendMessage({ action: "deleteWord", data: { id } });
 }
 
 export async function exportToAnki(): Promise<{ msg: string; error: boolean }> {
@@ -224,12 +131,8 @@ export async function exportToAnki(): Promise<{ msg: string; error: boolean }> {
 
   const res = await chrome.runtime.sendMessage({ action: "exportToAnki" });
 
-  if (res.error) {
-    return { msg: "Anki not running. Open Anki with AnkiConnect.", error: true };
-  }
-  if (res.empty) {
-    return { msg: "No words to export.", error: false };
-  }
+  if (res.error) return { msg: "Anki not running. Open Anki with AnkiConnect.", error: true };
+  if (res.empty) return { msg: "No words to export.", error: false };
 
   const parts: string[] = [];
   if (res.added) parts.push(`${res.added} added`);

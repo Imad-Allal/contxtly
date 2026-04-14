@@ -3,6 +3,7 @@ import time
 from dataclasses import dataclass
 from langdetect import detect, LangDetectException
 import spacy
+import simplemma
 
 from languages import get_language, get_spacy_models
 from languages.base import LanguageAnalysis
@@ -88,10 +89,36 @@ def parse_morphology(morph) -> dict[str, str]:
     return result
 
 
-def classify_word_type(token, lang: str) -> str:
+def fix_german_verb_morph(token, morph: dict, doc) -> dict:
+    """Fix verb Person/Number from the subject pronoun's spaCy morph.
+
+    Only applies when Person or Number is missing — happens when spaCy misclassified
+    the verb as NOUN and we corrected effective_pos to VERB. spaCy correctly
+    morphologizes pronouns even in de_core_news_lg, so we read directly from them.
+    """
+    text = token.text.lower()
+    if text.endswith("est") and len(text) > 3 and text[-4] not in "aeiouäöüy" and morph.get("Person") != "2":
+        return {**morph, "Person": "2", "Number": "Sing", "Tense": "Pres", "VerbForm": "Fin", "Mood": "Ind"}
+
+    if "Person" in morph and "Number" in morph:
+        return morph
+
+    for t in doc:
+        if t.pos_ != "PRON":
+            continue
+        pron_morph = parse_morphology(t.morph)
+        person = pron_morph.get("Person")
+        number = pron_morph.get("Number")
+        if person and number:
+            return {**morph, "Person": person, "Number": number, "Tense": "Pres", "VerbForm": "Fin", "Mood": "Ind"}
+
+    return morph
+
+
+def classify_word_type(token, lang: str, effective_pos: str | None = None, corrected_morph: dict | None = None) -> str:
     """Classify word type based on POS and morphology."""
-    pos = token.pos_
-    morph = parse_morphology(token.morph)
+    pos = effective_pos or token.pos_
+    morph = corrected_morph if corrected_morph is not None else parse_morphology(token.morph)
 
     # Verbs with tense/mood markers (excluding bare infinitives)
     if pos == "VERB" and any(k in morph for k in ["Tense", "Mood", "VerbForm"]):
@@ -188,7 +215,17 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto", text_o
             word_type="simple",
         )
 
+    # Correct spaCy POS for German: if tagged NOUN but the token is lowercase
+    # and simplemma gives a verb lemma, it's a verb misclassified by de_core_news_lg
+    effective_pos = token.pos_
+    if lang == "de" and token.pos_ == "NOUN" and token.text[0].islower():
+        sm_lemma = simplemma.lemmatize(token.text.lower(), lang="de")
+        if sm_lemma and sm_lemma != token.text.lower() and not sm_lemma[0].isupper():
+            effective_pos = "VERB"
+
     morph = parse_morphology(token.morph)
+    if lang == "de" and doc is not None:
+        morph = fix_german_verb_morph(token, morph, doc)
 
     # Run language-specific analysis (separable verbs, collocations, compound tenses, etc.)
     lang_module = get_language(lang)
@@ -198,12 +235,21 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto", text_o
 
     # word_type: language analysis overrides generic POS-based classification
     word_type = (lang_analysis.word_type if lang_analysis and lang_analysis.word_type
-                 else classify_word_type(token, lang))
+                 else classify_word_type(token, lang, effective_pos, morph))
+
+    # Use simplemma for verbs — more reliable for irregular forms (e.g. schloss → schließen)
+    if lang == "de" and effective_pos == "VERB":
+        lemma = simplemma.lemmatize(token.text, lang=lang) or token.lemma_
+    elif lang == "de" and effective_pos == "NOUN" and "ß" in token.lemma_:
+        # Fix old German spelling in noun lemmas (e.g. Fluß → Fluss)
+        lemma = simplemma.lemmatize(token.text, lang=lang) or token.lemma_
+    else:
+        lemma = token.lemma_
 
     return WordAnalysis(
         text=token.text,
-        lemma=token.lemma_,
-        pos=token.pos_,
+        lemma=lemma,
+        pos=effective_pos,
         morph=morph,
         lang=lang,
         word_type=word_type,

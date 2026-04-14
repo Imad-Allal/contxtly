@@ -28,7 +28,10 @@ class CachedTranslation:
     meaning: str | None
     breakdown: str | None
     context_translation: dict | None  # {"source": ..., "target": ...}
-    lemma: str | None = None  # Base form of the word
+    lemma: str | None = None
+    related_words: list | None = None
+    collocation_pattern: str | None = None
+    word_type: str | None = None
 
 
 class TranslationCache:

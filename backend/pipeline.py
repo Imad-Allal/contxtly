@@ -99,6 +99,9 @@ def translate_pipeline(
             breakdown=cached.breakdown,
             context_translation=cached.context_translation,
             lemma=cached.lemma,
+            related_words=cached.related_words,
+            collocation_pattern=cached.collocation_pattern,
+            word_type=cached.word_type,
         )
 
     # Check if context translation is cached (different word, same context)
@@ -120,10 +123,10 @@ def translate_pipeline(
     # What to translate: language analysis may override
     word_to_translate = (la.translate if la else None) or text
 
-    # Try to split compound words (NOUN, PROPN, ADJ - German has compound adjectives too)
+    # Try to split compound words (NOUN, PROPN, and participial ADJ only)
     compound_parts = None
     lang_module = get_language(detected_lang)
-    if analysis.pos in ("NOUN", "PROPN", "ADJ") and lang_module:
+    if analysis.pos in ("NOUN", "PROPN") and lang_module or (analysis.pos == "ADJ" and analysis.lemma and analysis.lemma.endswith("end") and lang_module):
         parts = lang_module.split_compound(text, analysis.lemma)
         if parts and len(parts) > 1:
             log.info(f"[STEP 1.5] Compound split: {text} → {parts}")
@@ -143,6 +146,7 @@ def translate_pipeline(
             compound_parts=compound_parts,
             collocation_pattern=llm_hint,
             modal_verb=modal_verb,
+            pos=analysis.pos,
         )
     translation = smart_result["translation"]
     meaning = smart_result["meaning"]
@@ -196,6 +200,11 @@ def translate_pipeline(
     # Display pattern for frontend
     collocation_pattern = la.pattern if la else None
 
+    # Compound detection overrides the generic word_type from the analyzer
+    final_word_type = analysis.word_type
+    if compound_parts and len(compound_parts) > 1:
+        final_word_type = "compound"
+
     # Store in cache
     cache.set(
         text, context, detected_lang, target_lang,
@@ -205,13 +214,11 @@ def translate_pipeline(
             breakdown=breakdown,
             context_translation=context_translation,
             lemma=lemma,
+            related_words=related_words if related_words else None,
+            collocation_pattern=collocation_pattern,
+            word_type=final_word_type,
         ),
     )
-
-    # Compound detection overrides the generic word_type from the analyzer
-    final_word_type = analysis.word_type
-    if compound_parts and len(compound_parts) > 1:
-        final_word_type = "compound"
 
     result = TranslationResult(
         translation=translation,

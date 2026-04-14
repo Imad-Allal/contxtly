@@ -1,5 +1,5 @@
 import { showButton, removeButton, showTooltip, updateTooltip, updateTooltipLogin, updateTooltipLimitReached, removeTooltip, isOwnElement } from "./ui.js";
-import { highlightSelection, applyHighlightToDOM, getCachedTranslation, removeFromStorage, removeHighlightFromDOM } from "./highlight.js";
+import { highlightSelection, getCachedTranslation, deleteWord } from "./highlight.js";
 
 const MAX_LENGTH = 500;
 const LETTER_OR_NUM = /\p{L}|\p{N}/u;
@@ -142,11 +142,8 @@ function findBoundary(text, pos, dir) {
 }
 
 // Create delete handler for a translation
-function createDeleteHandler(text) {
-  return async () => {
-    await removeFromStorage(text);
-    removeHighlightFromDOM(text);
-  };
+function createDeleteHandler(lemma) {
+  return () => deleteWord(lemma);
 }
 
 // Translation lock — prevents concurrent translations
@@ -159,10 +156,19 @@ async function translate(text, context, textOffset, range, x, y) {
   showTooltip(x, y);
 
   try {
-    const cached = await getCachedTranslation(text);
+    const cached = await getCachedTranslation(text, context);
     if (cached) {
       updateTooltip(cached, false, createDeleteHandler(cached.lemma || text));
-      applyHighlightToDOM(range, text, cached);
+      highlightSelection(range, text, cached);
+      return;
+    }
+
+    const { archives = [] } = await chrome.storage.local.get("archives");
+    const archivedEntry = archives.find((w) => (w.lemma || w.text) === text || w.text === text);
+    if (archivedEntry) {
+      const translation = archivedEntry.translation;
+      updateTooltip(translation, false, createDeleteHandler(translation?.lemma || text));
+      highlightSelection(range, text, translation);
       return;
     }
 

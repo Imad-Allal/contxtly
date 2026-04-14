@@ -80,7 +80,7 @@ export function Header({ settingsOpen, onToggleSettings, auth, onLogin, onLogout
         </div>
       </div>
 
-      {loggedIn && usage && (
+      {loggedIn && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 flex-1">
             <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -88,12 +88,12 @@ export function Header({ settingsOpen, onToggleSettings, auth, onLogin, onLogout
                 className="h-full rounded-full"
                 style={{ background: atLimit ? "#ef4444" : nearLimit ? "#f59e0b" : "#6366f1" }}
                 initial={{ width: 0 }}
-                animate={{ width: `${Math.min((usage.used / usage.limit) * 100, 100)}%` }}
+                animate={{ width: usage ? `${Math.min((usage.used / usage.limit) * 100, 100)}%` : "0%" }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
               />
             </div>
             <span className="text-[10px] font-semibold text-slate-500 whitespace-nowrap">
-              {usage.used} / {usage.limit} today
+              {usage ? `${usage.used} / ${usage.limit} today` : "— / — today"}
             </span>
           </div>
 

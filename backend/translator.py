@@ -68,6 +68,7 @@ def translate_smart(
     compound_parts: list[str] | None = None,
     collocation_pattern: str | None = None,
     modal_verb: str | None = None,
+    pos: str | None = None,
 ) -> dict:
     """
     Combined translation: word + meaning + base form + context translation + compound parts in one LLM call.
@@ -93,9 +94,30 @@ def translate_smart(
     """
     log.info(f"[TRANSLATE] translate_smart('{word}', {source_lang} -> {target_lang}, lemma={lemma}, collocation={collocation_pattern})")
 
+    pos_map = {
+        "DET": "determiner/article",
+        "PRON": "pronoun",
+        "VERB": "verb",
+        "NOUN": "noun",
+        "ADJ": "adjective",
+        "ADV": "adverb",
+        "ADP": "preposition",
+        "CONJ": "conjunction",
+        "CCONJ": "coordinating conjunction",
+        "SCONJ": "subordinating conjunction",
+        "PART": "particle",
+        "NUM": "numeral",
+        "INTJ": "interjection",
+    }
+    pos_instruction = ""
+    if pos and pos in pos_map:
+        pos_instruction = f'The word "{word}" is a {pos_map[pos]}. '
+
     context_instruction = ""
     if context:
-        context_instruction = f'The word appears in this sentence: "{context}"'
+        context_instruction = f'{pos_instruction}The word appears in this sentence: "{context}"'
+    elif pos_instruction:
+        context_instruction = pos_instruction.rstrip()
 
     collocation_instruction = ""
     if collocation_pattern:
@@ -133,7 +155,7 @@ Return JSON with:
 - translation: {"the idiomatic translation of the COLLOCATION in " + target_lang + " (e.g., the full verbal phrase like 's''attendre à')" if collocation_pattern else "the SHORT, CONCISE dictionary translation of the word itself in " + target_lang + " — 1 to 4 words maximum, like a dictionary entry (e.g. 'être disponible', 'partir', 'maison'). Do NOT use the context sentence to build a phrase. Translate the WORD, not the sentence."}
 - meaning: one sentence in {target_lang} explaining what "{word}" means IN THIS SPECIFIC CONTEXT (use the context sentence to explain, but keep it concise)
 - base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null){"" if skip_context_translation else f"""
-- context_translation: full translation of the context sentence to {target_lang} (only if context was provided, otherwise null)"""}{f'''
+- context_translation: full translation of the context sentence to {target_lang}. MUST be a real translation, NOT the original German text. If context was not provided, use null."""}{f'''
 - modal_translation: conjugated translation of "{modal_verb}" matching the person/tense in context (e.g., "will" → "veut", "kann" → "peut", "muss" → "doit"). NEVER give the infinitive form.''' if modal_verb else ''}{'''
 - parts: array of objects with "part" (original), "base" (lemma/base form), and "translation" (translation of base form) for each compound part (only if compound parts were provided)''' if compound_parts else ''}
 

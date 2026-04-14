@@ -14,11 +14,15 @@ export interface TranslationData {
 }
 
 export interface Word {
-  id?: string;
+  localId: string;       // stable local key (crypto.randomUUID)
+  dbId?: string;         // set async after DB confirms save
   text: string;
   lemma?: string;
   translation: TranslationData | string;
+  context?: string;
+  offset?: number | null;
   url?: string;
+  source_url?: string;
   timestamp?: number;
 }
 

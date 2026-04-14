@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Languages, LogIn, Trash2, ArrowLeft, Undo2 } from "lucide-react";
 import {
-  loadWords, deleteWords, deleteWordFromDB,
-  getWordsFromDB, syncDBWordsToHighlights,
-  getTrash, restoreWords, purgeWords,
+  loadWords, loadArchives,
+  archiveWords, restoreWords, purgeWords,
+  syncFromDBIfEmpty,
   openUrl,
 } from "./chrome-api";
 import { useSettings } from "./hooks/useSettings";
@@ -40,104 +40,85 @@ export default function App() {
   const { selected: trashSelected, allSelected: allTrashSelected, toggleSelect: toggleTrashSelect, toggleSelectAll: toggleTrashSelectAll, clearSelection: clearTrashSelection } = useWordSelection(filteredTrash);
   const { expandedWords: trashExpanded, toggleExpand: toggleTrashExpand } = useExpandedWords();
 
-  // Load words: browser storage first (instant), then attach DB ids in background
+  // Load words from wordStore (instant). If empty, seed from DB first.
   useEffect(() => {
     if (auth.loading || !auth.loggedIn) return;
 
-    async function loadAndSync() {
-      const browserWords = await loadWords();
+    // Show local words instantly — no await on network
+    loadWords().then(setWords);
 
-      if (browserWords.length > 0) {
-        // Show browser words immediately, then fetch DB ids to attach
-        setWords(browserWords);
-        const dbWords = await getWordsFromDB();
-        const idByText = new Map(dbWords.map((w) => [w.text, w.id]));
-        setWords((prev) =>
-          prev.map((w) => ({ ...w, id: w.id ?? idByText.get(w.text) }))
-        );
-      } else {
-        // Browser empty — fetch from DB, store locally, then display
-        const dbWords = await getWordsFromDB();
-        if (dbWords.length > 0) {
-          await syncDBWordsToHighlights(dbWords);
-          const synced = await loadWords();
-          // DB words already have ids
-          const idByText = new Map(dbWords.map((w) => [w.text, w.id]));
-          setWords(synced.map((w) => ({ ...w, id: w.id ?? idByText.get(w.text) })));
-        }
-      }
-    }
-
-    loadAndSync();
+    // Seed from DB in background if empty; re-render when done
+    syncFromDBIfEmpty().then(() => loadWords().then(setWords));
   }, [auth.loggedIn, auth.loading]);
 
-  // Load trash when panel opens
+  // Load archives when trash panel opens
   useEffect(() => {
     if (!showTrash || !auth.loggedIn) return;
-    getTrash().then(setTrashWords);
+    loadArchives().then(setTrashWords);
   }, [showTrash, auth.loggedIn]);
 
+  // React to wordStore changes triggered externally (content script restores, archives, etc.)
+  useEffect(() => {
+    if (!auth.loggedIn) return;
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if (changes.words) setWords((changes.words.newValue as Word[]) || []);
+      if (changes.archives && showTrash) setTrashWords((changes.archives.newValue as Word[]) || []);
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, [auth.loggedIn, showTrash]);
+
   const handleDelete = useCallback(async () => {
-    const selected_words = words.filter((w) => selected.has(getWordKey(w)));
-    const lemmas = selected_words.map(getWordKey);
-
-    await deleteWords(lemmas);
-
-    if (auth.loggedIn) {
-      await Promise.all(
-        selected_words.filter((w) => w.id).map((w) => deleteWordFromDB(w.id!))
-      );
-    }
-
+    const lemmas = words.filter((w) => selected.has(getWordKey(w))).map(getWordKey);
+    await archiveWords(lemmas);
     setWords((prev) => prev.filter((w) => !lemmas.includes(getWordKey(w))));
     clearSelection();
-  }, [words, selected, auth.loggedIn, clearSelection]);
+  }, [words, selected, clearSelection]);
 
   const handleRestore = useCallback(async () => {
-    const ids = trashWords
-      .filter((w) => trashSelected.has(getWordKey(w)) && w.id)
-      .map((w) => w.id!);
-    if (ids.length === 0) return;
-
-    const restored = await restoreWords(ids);
-
-    // Write restored words into local highlights so they appear immediately
-    if (restored.length > 0) {
-      await syncDBWordsToHighlights(restored);
-      const updatedWords = await loadWords();
-      setWords(updatedWords);
-    }
-
-    // Refresh trash list
-    const updatedTrash = await getTrash();
-    setTrashWords(updatedTrash);
+    const lemmas = trashWords.filter((w) => trashSelected.has(getWordKey(w))).map(getWordKey);
+    if (lemmas.length === 0) return;
+    await restoreWords(lemmas);
+    setTrashWords((prev) => prev.filter((w) => !lemmas.includes(getWordKey(w))));
+    setWords(await loadWords());
     clearTrashSelection();
   }, [trashWords, trashSelected, clearTrashSelection]);
 
   const handlePermanentDelete = useCallback(async () => {
-    const ids = trashWords
-      .filter((w) => trashSelected.has(getWordKey(w)) && w.id)
-      .map((w) => w.id!);
-    if (ids.length === 0) return;
-
-    await purgeWords(ids);
-    const updatedTrash = await getTrash();
-    setTrashWords(updatedTrash);
+    const lemmas = trashWords.filter((w) => trashSelected.has(getWordKey(w))).map(getWordKey);
+    if (lemmas.length === 0) return;
+    await purgeWords(lemmas);
+    setTrashWords((prev) => prev.filter((w) => !lemmas.includes(getWordKey(w))));
     clearTrashSelection();
   }, [trashWords, trashSelected, clearTrashSelection]);
 
   const handleOpenUrl = useCallback((url: string) => openUrl(url), []);
 
   if (!auth.loading && !auth.loggedIn) {
+    const containerStyle = {
+      height: "560px",
+      background: "linear-gradient(135deg, #f8fafc 0%, rgba(219,234,254,0.25) 50%, rgba(237,233,254,0.25) 100%)",
+      fontFamily: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
+    };
+
+    if (auth.loggingIn) {
+      return (
+        <div className="relative w-[380px] flex flex-col items-center justify-center overflow-hidden" style={containerStyle}>
+          <BackgroundOrbs />
+          <div className="relative z-10 flex flex-col items-center gap-4 px-8 text-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+              className="w-10 h-10 rounded-full border-[3px] border-indigo-200 border-t-indigo-500"
+            />
+            <p className="text-sm font-semibold text-slate-500">Signing in...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div
-        className="relative w-[380px] flex flex-col items-center justify-center overflow-hidden"
-        style={{
-          height: "560px",
-          background: "linear-gradient(135deg, #f8fafc 0%, rgba(219,234,254,0.25) 50%, rgba(237,233,254,0.25) 100%)",
-          fontFamily: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
-        }}
-      >
+      <div className="relative w-[380px] flex flex-col items-center justify-center overflow-hidden" style={containerStyle}>
         <BackgroundOrbs />
         <div className="relative z-10 flex flex-col items-center gap-6 px-8 text-center">
           <motion.div

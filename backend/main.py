@@ -80,7 +80,7 @@ async def translate(req: TranslateRequest, user_id: str = Depends(get_current_us
     except Exception as e:
         log.error(f"[ERROR] Translation failed: {e}")
         log.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Translation failed. Please try again.")
 
     increment_usage(user_id)
 
@@ -101,6 +101,7 @@ class SaveWordRequest(BaseModel):
     context: str | None = None
     source_url: str | None = None
     data: dict | None = None
+    offset: int | None = None
 
 
 @app.get("/words")
@@ -125,6 +126,7 @@ def save_word(req: SaveWordRequest, user_id: str = Depends(get_current_user)):
         "context": req.context,
         "source_url": req.source_url,
         "data": req.data,
+        "offset": req.offset,
     }).execute()
     return result.data[0]
 

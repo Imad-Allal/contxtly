@@ -95,20 +95,30 @@ def _has_fugenlaut(left: str) -> bool:
 
 
 def _clean_compound_part(part: str) -> str:
-    """Remove linking elements from compound parts (Fugenelement)."""
-    part_lower = part.lower()
-    pattern_result = None
-    for link, base in LINKING_PATTERNS:
-        if part_lower.endswith(link) and len(part) > len(link) + 2:
-            pattern_result = part[:-len(link)] + base
-            break
-    fugen_s_result = part[:-1] if _is_fugen_s(part) else None
-    if pattern_result and fugen_s_result:
-        lemma = simplemma.lemmatize(fugen_s_result, lang="de")
-        if lemma.lower() == pattern_result.lower():
-            return pattern_result  # Pattern result matches the true lemma
-        return fugen_s_result
-    return fugen_s_result or pattern_result or part
+    """Remove linking elements from compound parts (Fugenelement).
+
+    3-layer pipeline:
+    1. simplemma.lemmatize — handles most cases directly
+    2. Strip Fugenlaute (s/es/ns/ens) — for words simplemma doesn't know
+    3. simplemma.lemmatize on stripped form
+    """
+    # Layer 1: simplemma lemmatize
+    sm_lemma = simplemma.lemmatize(part, lang="de")
+    if sm_lemma and sm_lemma.lower() != part.lower() and simplemma.is_known(sm_lemma, lang="de"):
+        return sm_lemma
+    # If input is already a known word, return as-is
+    if simplemma.is_known(part, lang="de"):
+        return part
+    # Layer 2+3: strip Fugenlaute then re-lemmatize
+    for suffix in ("ens", "ns", "es", "s"):
+        if part.lower().endswith(suffix) and len(part) > len(suffix) + 2:
+            stripped = part[:-len(suffix)]
+            stripped_lemma = simplemma.lemmatize(stripped, lang="de")
+            if simplemma.is_known(stripped_lemma, lang="de"):
+                return stripped_lemma
+            if simplemma.is_known(stripped, lang="de"):
+                return stripped
+    return part
 
 
 # Present participle endings (inflected forms of -end)
@@ -230,9 +240,13 @@ def split_compound(word: str, _depth: int = 0) -> list[str] | None:
         return None
 
     # Validate that both parts are recognizable words (reject gibberish splits)
-    # Clean the left part first to check the base form, not the linking form
     cleaned_left = _clean_compound_part(left)
-    if not simplemma.is_known(cleaned_left, lang="de") or not simplemma.is_known(right, lang="de"):
+    left_known = (
+        simplemma.is_known(cleaned_left, lang="de")
+        or simplemma.is_known(cleaned_left + "n", lang="de")
+        or simplemma.is_known(cleaned_left + "en", lang="de")
+    )
+    if not left_known or not simplemma.is_known(right, lang="de"):
         return None
 
     # Clean linking elements from left part
