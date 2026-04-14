@@ -155,7 +155,7 @@ Return JSON with:
 - translation: {"the idiomatic translation of the COLLOCATION in " + target_lang + " (e.g., the full verbal phrase like 's''attendre à')" if collocation_pattern else "the SHORT, CONCISE dictionary translation of the word itself in " + target_lang + " — 1 to 4 words maximum, like a dictionary entry (e.g. 'être disponible', 'partir', 'maison'). Do NOT use the context sentence to build a phrase. Translate the WORD, not the sentence."}
 - meaning: one sentence in {target_lang} explaining what "{word}" means IN THIS SPECIFIC CONTEXT (use the context sentence to explain, but keep it concise)
 - base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null){"" if skip_context_translation else f"""
-- context_translation: full translation of the context sentence to {target_lang}. MUST be a real translation, NOT the original German text. If context was not provided, use null."""}{f'''
+- context_translation: translate the full context sentence into {target_lang}. MUST be a real translation in {target_lang}, NOT the original German text. Return ONLY the translated sentence as a plain string — no quotes, no explanations, no original text. If context was not provided, use null."""}{f'''
 - modal_translation: conjugated translation of "{modal_verb}" matching the person/tense in context (e.g., "will" → "veut", "kann" → "peut", "muss" → "doit"). NEVER give the infinitive form.''' if modal_verb else ''}{'''
 - parts: array of objects with "part" (original), "base" (lemma/base form), and "translation" (translation of base form) for each compound part (only if compound parts were provided)''' if compound_parts else ''}
 
