@@ -37,6 +37,17 @@ function copyStaticFiles() {
         resolve(__dirname, "src/popup/popup.html"),
         resolve(dist, "popup/popup.html")
       );
+
+      // Copy extension icons
+      if (!existsSync(resolve(dist, "icons"))) {
+        mkdirSync(resolve(dist, "icons"));
+      }
+      for (const size of [16, 32, 48, 128]) {
+        copyFileSync(
+          resolve(__dirname, `icons/icon-${size}.png`),
+          resolve(dist, `icons/icon-${size}.png`)
+        );
+      }
     },
   };
 }

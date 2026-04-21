@@ -33,11 +33,19 @@ def detect_separable_verb(target_token, doc: spacy.tokens.Doc) -> tuple[str, Tok
     if target_token.pos_ not in ("VERB", "AUX"):
         return None
 
+    # Zu-infinitives (e.g. "abzuwarten") already fuse the separable prefix into
+    # the verb — any nearby "um"/"zu" is the purpose-clause marker, not a prefix.
+    if target_token.tag_ == "VVIZU":
+        return None
+
     for token in doc:
         if token.head != target_token:
             continue
         # spaCy tags separable "zu" as PTKVZ, infinitive "zu" as PTKZU
         if token.tag_ == "PTKZU":
+            continue
+        # "um" in "um … zu" is KOUI/SCONJ — a clause marker, not a prefix.
+        if token.tag_ == "KOUI" or token.pos_ in ("SCONJ", "CCONJ"):
             continue
         is_particle = token.tag_ == "PTKVZ" or token.dep_ == "svp"
         is_known_prefix = (token.text.lower() in SEPARABLE_PREFIXES
@@ -67,6 +75,9 @@ def detect_separable_verb_from_prefix(target_token, doc: spacy.tokens.Doc) -> tu
     """
     # Check if this token is a separable verb particle (PTKVZ tag, svp dependency, or known prefix)
     is_particle = target_token.tag_ == "PTKVZ" or target_token.dep_ == "svp"
+    # Exclude clause markers like "um" in "um … zu" (KOUI/SCONJ).
+    if target_token.tag_ == "KOUI" or target_token.pos_ in ("SCONJ", "CCONJ"):
+        return None
     is_known_prefix = (target_token.text.lower() in SEPARABLE_PREFIXES
                        and target_token.pos_ not in ("DET", "PRON", "NOUN")
                        and target_token.dep_ not in ("nk", "mo", "sb", "og", "da", "oa"))

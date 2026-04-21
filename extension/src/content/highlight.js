@@ -63,7 +63,7 @@ function getContextAndOffset(range, text) {
     preRange.setEnd(range.startContainer, range.startOffset);
     const offset = preRange.toString().length;
     const full = block.textContent;
-    const context = full.slice(Math.max(0, offset - 30), Math.min(full.length, offset + text.length + 30));
+    const context = full.slice(Math.max(0, offset - 150), Math.min(full.length, offset + text.length + 150));
     console.log(`[contxtly] saved "${text}": offset=${offset}, block tag=${block.tagName}, block len=${full.length}`);
     return { context, offset };
   } catch {

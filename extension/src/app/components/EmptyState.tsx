@@ -1,55 +1,43 @@
 import { motion } from "framer-motion";
-import { Search, BookOpen, Sparkles } from "lucide-react";
+import { Search, BookOpen } from "lucide-react";
+import { COLORS, MOTION } from "../theme";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 
 export function EmptyState({ isSearch }: { isSearch: boolean }) {
+  const reduced = useReducedMotion();
+  const Icon = isSearch ? Search : BookOpen;
+  const swatch = isSearch ? COLORS.slate : COLORS.primary;
+
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.88 }}
+      initial={{ opacity: 0, scale: 0.94 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={MOTION.base}
       className="flex flex-col items-center justify-center py-12 px-4 text-center"
     >
-      <motion.div
-        animate={{ y: [0, -9, 0] }}
-        transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-        className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100/80 to-purple-100/80 flex items-center justify-center mb-4 shadow-sm"
-        style={{ backdropFilter: "blur(8px)" }}
-      >
-        {isSearch ? (
-          <Search className="text-blue-400" size={26} />
-        ) : (
-          <BookOpen className="text-purple-400" size={26} />
-        )}
+      <div className="relative">
         <motion.div
-          animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-blue-200 to-purple-200 flex items-center justify-center"
+          animate={reduced ? undefined : { y: [0, -6, 0] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          className="w-20 h-20 rounded-3xl flex items-center justify-center mb-4"
+          style={{
+            background: `linear-gradient(135deg, ${swatch.bg}, #ffffff)`,
+            border: `1px solid ${swatch.ring}`,
+            boxShadow: `0 8px 24px ${swatch.accent}22`,
+          }}
         >
-          <Sparkles size={10} className="text-purple-500" />
+          <Icon size={30} style={{ color: swatch.accent }} strokeWidth={1.8} />
         </motion.div>
-      </motion.div>
+      </div>
 
-      <h3 className="text-[13px] font-bold text-slate-700 mb-1.5">
-        {isSearch ? "No matches found" : "No translations yet"}
+      <h3 className="text-[14px] font-bold text-slate-700 mb-1.5">
+        {isSearch ? "No matches found" : "Your collection is empty"}
       </h3>
-      <p className="text-[11px] text-slate-400 max-w-[170px] leading-relaxed">
+      <p className="text-[11.5px] text-slate-500 max-w-[200px] leading-relaxed">
         {isSearch
-          ? "Try a different search term"
-          : "Highlight text on any webpage to start building your collection"}
+          ? "Try a different search term or filter."
+          : "Highlight any word on any webpage to start building your vocabulary."}
       </p>
-
-      {!isSearch && (
-        <div className="flex gap-2 mt-5">
-          {[0, 0.22, 0.44].map((delay, i) => (
-            <motion.div
-              key={i}
-              animate={{ scale: [1, 1.5, 1], opacity: [0.35, 1, 0.35] }}
-              transition={{ duration: 1.3, repeat: Infinity, delay, ease: "easeInOut" }}
-              className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-blue-400 to-purple-500"
-            />
-          ))}
-        </div>
-      )}
     </motion.div>
   );
 }

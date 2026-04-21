@@ -37,11 +37,32 @@ export function useWordSelection(filtered: Word[]) {
   return { selected, allSelected, toggleSelect, toggleSelectAll, clearSelection };
 }
 
-export function useWordFilter(words: Word[], search: string) {
+export type WordTypeFilter = "all" | "noun" | "verb" | "collocation" | "expression" | "other";
+
+function getTypeGroup(word: Word): WordTypeFilter {
+  const t = word.translation;
+  if (typeof t !== "object" || t === null) return "other";
+  const wt = t.word_type;
+  if (!wt) return t.collocation_pattern ? "collocation" : "other";
+  if (wt === "noun" || wt === "plural_noun") return "noun";
+  if (wt === "conjugated_verb" || wt === "separable_prefix") return "verb";
+  if (wt === "collocation_verb" || wt === "collocation_prep") return "collocation";
+  if (wt === "fixed_expression") return "expression";
+  return "other";
+}
+
+export function useWordFilter(words: Word[], search: string, typeFilter: WordTypeFilter = "all") {
   return useMemo(() => {
+    let result = words;
+
+    if (typeFilter !== "all") {
+      result = result.filter((w) => getTypeGroup(w) === typeFilter);
+    }
+
     const q = search.toLowerCase().trim();
-    if (!q) return words;
-    return words.filter((w) => {
+    if (!q) return result;
+
+    return result.filter((w) => {
       const display = getWordKey(w).toLowerCase();
       if (display.includes(q)) return true;
       const t = w.translation;
@@ -53,7 +74,7 @@ export function useWordFilter(words: Word[], search: string) {
       }
       return String(t).toLowerCase().includes(q);
     });
-  }, [words, search]);
+  }, [words, search, typeFilter]);
 }
 
 export function useExpandedWords() {

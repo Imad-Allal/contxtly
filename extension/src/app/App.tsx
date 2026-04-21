@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Languages, LogIn, Trash2, ArrowLeft, Undo2 } from "lucide-react";
 import {
@@ -10,54 +10,58 @@ import {
 import { useSettings } from "./hooks/useSettings";
 import { useAnkiExport } from "./hooks/useAnkiExport";
 import { useAuth } from "./hooks/useAuth";
-import { useWordSelection, useWordFilter, useExpandedWords, getWordKey } from "./hooks/useWords";
+import { useWordSelection, useWordFilter, useExpandedWords, getWordKey, type WordTypeFilter } from "./hooks/useWords";
+import { useOnboarding } from "./hooks/useOnboarding";
+import { useShortcuts } from "./hooks/useShortcuts";
 import { BackgroundOrbs } from "./components/BackgroundOrbs";
-import { Header } from "./components/Header";
+import { Header, type AppTab } from "./components/Header";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { Toolbar } from "./components/Toolbar";
 import { WordCard } from "./components/WordCard";
 import { EmptyState } from "./components/EmptyState";
 import { Footer } from "./components/Footer";
+import { OnboardingOverlay } from "./components/onboarding/OnboardingOverlay";
+import { ShortcutsOverlay } from "./components/ShortcutsOverlay";
+import { WordOfDay } from "./components/WordOfDay";
+import { StatsPanel } from "./components/StatsPanel";
+import { ReviewView } from "./components/ReviewView";
+import { BG_GRADIENT, FONT_STACK, PRIMARY_GRADIENT } from "./theme";
 import type { Word } from "./types";
 
 export default function App() {
   const [words, setWords] = useState<Word[]>([]);
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<WordTypeFilter>("all");
   const [trashWords, setTrashWords] = useState<Word[]>([]);
   const [showTrash, setShowTrash] = useState(false);
+  const [tab, setTab] = useState<AppTab>("list");
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const settings = useSettings();
-  const { ankiStatus, isExporting, handleExport } = useAnkiExport();
+  const anki = useAnkiExport();
   const auth = useAuth();
+  const onboarding = useOnboarding(auth.loggedIn);
 
-  // Main list state
-  const filtered = useWordFilter(words, search);
+  const filtered = useWordFilter(words, search, typeFilter);
   const { selected, allSelected, toggleSelect, toggleSelectAll, clearSelection } = useWordSelection(filtered);
   const { expandedWords, toggleExpand } = useExpandedWords();
 
-  // Trash list state (reuse same hooks on trashWords)
   const filteredTrash = useWordFilter(trashWords, "");
   const { selected: trashSelected, allSelected: allTrashSelected, toggleSelect: toggleTrashSelect, toggleSelectAll: toggleTrashSelectAll, clearSelection: clearTrashSelection } = useWordSelection(filteredTrash);
   const { expandedWords: trashExpanded, toggleExpand: toggleTrashExpand } = useExpandedWords();
 
-  // Load words from wordStore (instant). If empty, seed from DB first.
   useEffect(() => {
     if (auth.loading || !auth.loggedIn) return;
-
-    // Show local words instantly — no await on network
     loadWords().then(setWords);
-
-    // Seed from DB in background if empty; re-render when done
     syncFromDBIfEmpty().then(() => loadWords().then(setWords));
   }, [auth.loggedIn, auth.loading]);
 
-  // Load archives when trash panel opens
   useEffect(() => {
     if (!showTrash || !auth.loggedIn) return;
     loadArchives().then(setTrashWords);
   }, [showTrash, auth.loggedIn]);
 
-  // React to wordStore changes triggered externally (content script restores, archives, etc.)
   useEffect(() => {
     if (!auth.loggedIn) return;
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
@@ -67,6 +71,20 @@ export default function App() {
     chrome.storage.onChanged.addListener(listener);
     return () => chrome.storage.onChanged.removeListener(listener);
   }, [auth.loggedIn, showTrash]);
+
+  useShortcuts({
+    onFocusSearch: () => searchInputRef.current?.focus(),
+    onToggleTrash: () => setShowTrash((v) => !v),
+    onListTab: () => setTab("list"),
+    onReviewTab: () => setTab("review"),
+    onStatsTab: () => setTab("stats"),
+    onExport: anki.handleExport,
+    onHelp: () => setShowShortcuts(true),
+    onEscape: () => {
+      if (showShortcuts) setShowShortcuts(false);
+      else if (showTrash) setShowTrash(false);
+    },
+  }, auth.loggedIn && !onboarding.showOverlay);
 
   const handleDelete = useCallback(async () => {
     const lemmas = words.filter((w) => selected.has(getWordKey(w))).map(getWordKey);
@@ -94,11 +112,17 @@ export default function App() {
 
   const handleOpenUrl = useCallback((url: string) => openUrl(url), []);
 
+  const handleOpenWord = useCallback((w: Word) => {
+    setTab("list");
+    const key = getWordKey(w);
+    if (!expandedWords.has(key)) toggleExpand(key);
+  }, [expandedWords, toggleExpand]);
+
   if (!auth.loading && !auth.loggedIn) {
     const containerStyle = {
       height: "560px",
-      background: "linear-gradient(135deg, #f8fafc 0%, rgba(219,234,254,0.25) 50%, rgba(237,233,254,0.25) 100%)",
-      fontFamily: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
+      background: BG_GRADIENT,
+      fontFamily: FONT_STACK,
     };
 
     if (auth.loggingIn) {
@@ -126,7 +150,7 @@ export default function App() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.3 }}
             className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl"
-            style={{ background: "linear-gradient(135deg, #4f46e5, #6366f1)", boxShadow: "0 8px 24px rgba(99,102,241,0.3)" }}
+            style={{ background: PRIMARY_GRADIENT, boxShadow: "0 8px 24px rgba(99,102,241,0.3)" }}
           >
             <Languages className="text-white" size={32} />
           </motion.div>
@@ -146,7 +170,7 @@ export default function App() {
             whileTap={{ scale: 0.97 }}
             onClick={auth.login}
             className="flex items-center gap-2.5 px-6 py-3 rounded-xl text-white font-bold text-sm shadow-lg"
-            style={{ background: "linear-gradient(135deg, #4f46e5, #6366f1)", boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
+            style={{ background: PRIMARY_GRADIENT, boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
           >
             <LogIn size={16} />
             Sign in with Google
@@ -161,8 +185,8 @@ export default function App() {
       className="relative w-[380px] flex flex-col overflow-hidden"
       style={{
         height: "560px",
-        background: "linear-gradient(135deg, #f8fafc 0%, rgba(219,234,254,0.25) 50%, rgba(237,233,254,0.25) 100%)",
-        fontFamily: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
+        background: BG_GRADIENT,
+        fontFamily: FONT_STACK,
       }}
     >
       <BackgroundOrbs />
@@ -170,7 +194,6 @@ export default function App() {
       <div className="relative z-10 flex flex-col h-full">
         <AnimatePresence mode="wait">
           {showTrash ? (
-            // ── Trash view ──────────────────────────────────────────────────
             <motion.div
               key="trash"
               initial={{ x: 380 }}
@@ -179,7 +202,6 @@ export default function App() {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="flex flex-col h-full"
             >
-              {/* Trash header */}
               <div
                 className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100/80"
                 style={{ backdropFilter: "blur(12px)", background: "rgba(255,255,255,0.45)" }}
@@ -188,6 +210,7 @@ export default function App() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => { setShowTrash(false); clearTrashSelection(); }}
+                  aria-label="Back to list"
                   className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-all"
                 >
                   <ArrowLeft size={14} />
@@ -199,11 +222,11 @@ export default function App() {
                     <span className="text-[11px] font-semibold text-slate-400">({trashWords.length}/10)</span>
                   )}
                 </span>
-                {/* Trash toolbar: select all + restore */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={toggleTrashSelectAll}
+                  aria-label={allTrashSelected ? "Deselect all" : "Select all"}
                   title={allTrashSelected ? "Deselect all" : "Select all"}
                   className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all text-[11px] font-bold ${
                     allTrashSelected
@@ -223,6 +246,7 @@ export default function App() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleRestore}
+                        aria-label={`Restore ${trashSelected.size} selected`}
                         title={`Restore ${trashSelected.size} selected`}
                         className="relative h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-amber-500 hover:bg-amber-50 hover:border-amber-200 transition-all overflow-visible flex-shrink-0"
                       >
@@ -242,6 +266,7 @@ export default function App() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handlePermanentDelete}
+                        aria-label={`Permanently delete ${trashSelected.size} selected`}
                         title={`Permanently delete ${trashSelected.size} selected`}
                         className="relative h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-red-400 hover:bg-red-50 hover:border-red-200 transition-all overflow-visible flex-shrink-0"
                       >
@@ -259,7 +284,6 @@ export default function App() {
                 </AnimatePresence>
               </div>
 
-              {/* Trash word list */}
               <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-1.5 custom-scroll">
                 {filteredTrash.length === 0 ? (
                   <EmptyState isSearch={false} />
@@ -274,6 +298,7 @@ export default function App() {
                       onToggleSelect={toggleTrashSelect}
                       onToggleExpand={toggleTrashExpand}
                       onOpenUrl={handleOpenUrl}
+                      autoExpandOnHover
                     />
                   ))
                 )}
@@ -282,7 +307,6 @@ export default function App() {
               <Footer wordCount={filteredTrash.length} ankiStatus={null} />
             </motion.div>
           ) : (
-            // ── Main view ───────────────────────────────────────────────────
             <motion.div
               key="main"
               initial={{ x: -380 }}
@@ -297,6 +321,8 @@ export default function App() {
                 auth={auth}
                 onLogin={auth.login}
                 onLogout={auth.logout}
+                tab={tab}
+                onTabChange={setTab}
               />
 
               <SettingsPanel
@@ -308,39 +334,96 @@ export default function App() {
                 auth={auth}
               />
 
-              <Toolbar
-                search={search}
-                onSearchChange={setSearch}
-                isExporting={isExporting}
-                onExport={handleExport}
-                allSelected={allSelected}
-                onToggleSelectAll={toggleSelectAll}
-                selectedCount={selected.size}
-                onDelete={handleDelete}
-                onOpenTrash={() => setShowTrash(true)}
-              />
-
-              <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-1.5 custom-scroll">
-                {filtered.length === 0 ? (
-                  <EmptyState isSearch={!!search} />
-                ) : (
-                  filtered.map((word, index) => (
-                    <WordCard
-                      key={getWordKey(word)}
-                      word={word}
-                      index={index}
-                      isSelected={selected.has(getWordKey(word))}
-                      isExpanded={expandedWords.has(getWordKey(word))}
-                      onToggleSelect={toggleSelect}
-                      onToggleExpand={toggleExpand}
-                      onOpenUrl={handleOpenUrl}
+              <AnimatePresence mode="wait">
+                {tab === "list" && (
+                  <motion.div
+                    key="list"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col flex-1 min-h-0"
+                  >
+                    <Toolbar
+                      search={search}
+                      onSearchChange={setSearch}
+                      typeFilter={typeFilter}
+                      onTypeFilterChange={setTypeFilter}
+                      isExporting={anki.isExporting}
+                      onExport={anki.handleExport}
+                      allSelected={allSelected}
+                      onToggleSelectAll={toggleSelectAll}
+                      selectedCount={selected.size}
+                      onDelete={handleDelete}
+                      onOpenTrash={() => setShowTrash(true)}
+                      searchInputRef={searchInputRef}
+                      words={words}
                     />
-                  ))
-                )}
-              </div>
 
-              <Footer wordCount={filtered.length} ankiStatus={ankiStatus} />
+                    <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-1.5 custom-scroll">
+                      {filtered.length === 0 ? (
+                        <EmptyState isSearch={!!search} />
+                      ) : (
+                        <>
+                          {!search && typeFilter === "all" && words.length > 0 && (
+                            <WordOfDay words={words} onOpen={handleOpenWord} />
+                          )}
+                          {filtered.map((word, index) => (
+                            <WordCard
+                              key={getWordKey(word)}
+                              word={word}
+                              index={index}
+                              isSelected={selected.has(getWordKey(word))}
+                              isExpanded={expandedWords.has(getWordKey(word))}
+                              onToggleSelect={toggleSelect}
+                              onToggleExpand={toggleExpand}
+                              onOpenUrl={handleOpenUrl}
+                            />
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {tab === "review" && (
+                  <motion.div
+                    key="review"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col flex-1 min-h-0"
+                  >
+                    <ReviewView words={words} />
+                  </motion.div>
+                )}
+
+                {tab === "stats" && (
+                  <motion.div
+                    key="stats"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col flex-1 min-h-0"
+                  >
+                    <StatsPanel words={words} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <Footer wordCount={filtered.length} ankiStatus={anki.ankiStatus} />
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {onboarding.showOverlay && (
+            <OnboardingOverlay onFinish={onboarding.finish} />
+          )}
+          {showShortcuts && !onboarding.showOverlay && (
+            <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />
           )}
         </AnimatePresence>
       </div>

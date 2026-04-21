@@ -49,7 +49,7 @@ function buildCardBack(h) {
 
   const source = t.context_translation?.source;
   const target = t.context_translation?.target;
-  const url = h.url;
+  const url = h.source_url || h.url;
   if (source || target || url) {
     const ctx = `
       <div style="border-left:2px solid #777;padding-left:14px;display:flex;flex-direction:column;gap:10px">
@@ -121,11 +121,11 @@ async function resolveAnkiModel() {
 // ── Export handler ────────────────────────────────────────────────────────────
 
 export async function handleExportToAnki() {
-  const { highlights = {} } = await chrome.storage.local.get(["highlights"]);
+  const { words: stored = [] } = await chrome.storage.local.get(["words"]);
 
   const seen = new Set();
-  const words = Object.entries(highlights)
-    .flatMap(([url, items]) => items.map((h) => ({ ...h, url })))
+  const words = stored
+    .slice()
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
     .filter((h) => {
       const key = h.lemma || h.text;
