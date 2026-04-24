@@ -62,12 +62,12 @@ export async function purgeWords(lemmas: string[]): Promise<void> {
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
-export async function loadSettings(): Promise<{ targetLang: string; mode: string }> {
-  if (!isChromeExt) return { targetLang: "en", mode: "smart" };
+export async function loadSettings(): Promise<{ targetLang: string; mode: string; enabled: boolean }> {
+  if (!isChromeExt) return { targetLang: "en", mode: "smart", enabled: true };
   return chrome.runtime.sendMessage({ action: "getSettings" });
 }
 
-export function saveSettings(data: { targetLang: string; mode: string }) {
+export function saveSettings(data: { targetLang: string; mode: string; enabled: boolean }) {
   if (!isChromeExt) return;
   chrome.runtime.sendMessage({ action: "saveSettings", data });
 }
@@ -123,13 +123,13 @@ export function openUrl(url: string) {
   }
 }
 
-export async function exportToAnki(): Promise<{ msg: string; error: boolean }> {
+export async function exportToAnki(lemmas?: string[]): Promise<{ msg: string; error: boolean }> {
   if (!isChromeExt) {
     await new Promise((r) => setTimeout(r, 900));
     return { msg: "\u2713 4 added (demo mode)", error: false };
   }
 
-  const res = await chrome.runtime.sendMessage({ action: "exportToAnki" });
+  const res = await chrome.runtime.sendMessage({ action: "exportToAnki", data: { lemmas } });
 
   if (res.error) return { msg: "Anki not running. Open Anki with AnkiConnect.", error: true };
   if (res.empty) return { msg: "No words to export.", error: false };

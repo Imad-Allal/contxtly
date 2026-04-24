@@ -22,6 +22,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 const DEFAULT_SETTINGS = {
   targetLang: "en",
   mode: "smart",
+  enabled: true,
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -307,7 +308,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     saveSettings:       () => chrome.storage.local.set({ settings: request.data }).then(() => ({ success: true })),
 
     // Anki
-    exportToAnki:       () => handleExportToAnki(),
+    exportToAnki:       () => handleExportToAnki(request.data?.lemmas),
 
     // Misc
     openUrl: () => {

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Languages, LogIn, Trash2, ArrowLeft, Undo2 } from "lucide-react";
+import { LogIn, Trash2, ArrowLeft, Undo2 } from "lucide-react";
+import { ContxtlyLogo } from "./ContxtlyLogo";
+import { useReducedMotion } from "./hooks/useReducedMotion";
 import {
   loadWords, loadArchives,
   archiveWords, restoreWords, purgeWords,
@@ -42,6 +44,7 @@ export default function App() {
   const anki = useAnkiExport();
   const auth = useAuth();
   const onboarding = useOnboarding(auth.loggedIn);
+  const reduced = useReducedMotion();
 
   const filtered = useWordFilter(words, search, typeFilter);
   const { selected, allSelected, toggleSelect, toggleSelectAll, clearSelection } = useWordSelection(filtered);
@@ -78,7 +81,7 @@ export default function App() {
     onListTab: () => setTab("list"),
     onReviewTab: () => setTab("review"),
     onStatsTab: () => setTab("stats"),
-    onExport: anki.handleExport,
+    onExport: () => anki.handleExport(words.filter((w) => selected.has(getWordKey(w))).length > 0 ? words.filter((w) => selected.has(getWordKey(w))) : words),
     onHelp: () => setShowShortcuts(true),
     onEscape: () => {
       if (showShortcuts) setShowShortcuts(false);
@@ -116,6 +119,12 @@ export default function App() {
     setTab("list");
     const key = getWordKey(w);
     if (!expandedWords.has(key)) toggleExpand(key);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const el = document.querySelector(`[data-word-key="${CSS.escape(key)}"]`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 120);
+    });
   }, [expandedWords, toggleExpand]);
 
   if (!auth.loading && !auth.loggedIn) {
@@ -133,7 +142,7 @@ export default function App() {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-              className="w-10 h-10 rounded-full border-[3px] border-indigo-200 border-t-indigo-500"
+              className="w-10 h-10 rounded-full border-[3px] border-rose-200 border-t-rose-500"
             />
             <p className="text-sm font-semibold text-slate-500">Signing in...</p>
           </div>
@@ -146,13 +155,12 @@ export default function App() {
         <BackgroundOrbs />
         <div className="relative z-10 flex flex-col items-center gap-6 px-8 text-center">
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl"
-            style={{ background: PRIMARY_GRADIENT, boxShadow: "0 8px 24px rgba(99,102,241,0.3)" }}
+            initial={{ scale: 0.5, rotate: -8, opacity: 0 }}
+            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 18 }}
+            style={{ width: 72, height: 72 }}
           >
-            <Languages className="text-white" size={32} />
+            <ContxtlyLogo size={72} reduced={reduced} />
           </motion.div>
           <motion.div
             initial={{ y: 10, opacity: 0 }}
@@ -170,11 +178,37 @@ export default function App() {
             whileTap={{ scale: 0.97 }}
             onClick={auth.login}
             className="flex items-center gap-2.5 px-6 py-3 rounded-xl text-white font-bold text-sm shadow-lg"
-            style={{ background: PRIMARY_GRADIENT, boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
+            style={{ background: PRIMARY_GRADIENT, boxShadow: "0 4px 16px rgba(187,0,81,0.35)" }}
           >
             <LogIn size={16} />
             Sign in with Google
           </motion.button>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.3 }}
+            className="text-[10.5px] text-slate-400 leading-relaxed max-w-[260px]"
+          >
+            By signing in, you agree to our{" "}
+            <a
+              href="https://legal.contxtly.xyz/terms.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-rose-600 hover:text-rose-700 underline underline-offset-2"
+            >
+              Terms
+            </a>{" "}
+            and{" "}
+            <a
+              href="https://legal.contxtly.xyz/privacy.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-rose-600 hover:text-rose-700 underline underline-offset-2"
+            >
+              Privacy Policy
+            </a>
+            .
+          </motion.p>
         </div>
       </div>
     );
@@ -230,7 +264,7 @@ export default function App() {
                   title={allTrashSelected ? "Deselect all" : "Select all"}
                   className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all text-[11px] font-bold ${
                     allTrashSelected
-                      ? "bg-indigo-50 border-indigo-200 text-indigo-600"
+                      ? "bg-rose-50 border-rose-200 text-rose-600"
                       : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                   }`}
                 >
@@ -248,13 +282,13 @@ export default function App() {
                         onClick={handleRestore}
                         aria-label={`Restore ${trashSelected.size} selected`}
                         title={`Restore ${trashSelected.size} selected`}
-                        className="relative h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-amber-500 hover:bg-amber-50 hover:border-amber-200 transition-all overflow-visible flex-shrink-0"
+                        className="relative h-8 rounded-lg flex items-center justify-center border border-slate-200 bg-white text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-all overflow-visible flex-shrink-0"
                       >
                         <Undo2 size={13} />
                         <motion.span
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute -top-1.5 -right-1.5 w-[15px] h-[15px] rounded-full bg-amber-400 text-white text-[9px] font-bold flex items-center justify-center border border-white"
+                          className="absolute -top-1.5 -right-1.5 w-[15px] h-[15px] rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center border border-white"
                         >
                           {trashSelected.size}
                         </motion.span>
@@ -318,6 +352,8 @@ export default function App() {
               <Header
                 settingsOpen={settings.settingsOpen}
                 onToggleSettings={settings.toggleSettings}
+                enabled={settings.enabled}
+                onEnabledChange={settings.handleEnabledChange}
                 auth={auth}
                 onLogin={auth.login}
                 onLogout={auth.logout}
@@ -351,6 +387,7 @@ export default function App() {
                       onTypeFilterChange={setTypeFilter}
                       isExporting={anki.isExporting}
                       onExport={anki.handleExport}
+                      selectedWords={words.filter((w) => selected.has(getWordKey(w)))}
                       allSelected={allSelected}
                       onToggleSelectAll={toggleSelectAll}
                       selectedCount={selected.size}
@@ -420,7 +457,11 @@ export default function App() {
 
         <AnimatePresence>
           {onboarding.showOverlay && (
-            <OnboardingOverlay onFinish={onboarding.finish} />
+            <OnboardingOverlay
+              onFinish={onboarding.finish}
+              targetLang={settings.targetLang}
+              onLangChange={settings.handleLangChange}
+            />
           )}
           {showShortcuts && !onboarding.showOverlay && (
             <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />

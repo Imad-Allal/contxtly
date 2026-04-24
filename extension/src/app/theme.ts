@@ -2,6 +2,8 @@ import type { Transition } from "framer-motion";
 
 export type WordTypeColorKey =
   | "verb"
+  | "verb_modal"
+  | "verb_compound"
   | "noun"
   | "adjective"
   | "collocation"
@@ -16,13 +18,15 @@ export interface ColorSwatch {
 }
 
 export const COLORS: Record<WordTypeColorKey | "primary" | "slate", ColorSwatch> = {
-  verb:        { bg: "#eff6ff", ring: "#bfdbfe", text: "#1d4ed8", accent: "#60a5fa" },
+  verb:          { bg: "#eff6ff", ring: "#bfdbfe", text: "#1d4ed8", accent: "#60a5fa" },
+  verb_modal:    { bg: "#f0f9ff", ring: "#bae6fd", text: "#0c4a6e", accent: "#7dd3fc" },
+  verb_compound: { bg: "#dbeafe", ring: "#93c5fd", text: "#1e3a8a", accent: "#1d4ed8" },
   noun:        { bg: "#f5f3ff", ring: "#ddd6fe", text: "#5b21b6", accent: "#a78bfa" },
   adjective:   { bg: "#fffbeb", ring: "#fde68a", text: "#92400e", accent: "#f59e0b" },
   collocation: { bg: "#fff0f6", ring: "#f9a8c9", text: "#bb0051", accent: "#bb0051" },
   expression:  { bg: "#fff1f2", ring: "#fecdd3", text: "#9d174d", accent: "#fb7185" },
   compound:    { bg: "#ecfdf5", ring: "#a7f3d0", text: "#065f46", accent: "#34d399" },
-  primary:     { bg: "#eef2ff", ring: "#c7d2fe", text: "#4338ca", accent: "#6366f1" },
+  primary:     { bg: "#f3eaff", ring: "#d9b8ff", text: "#5200c7", accent: "#6c00ff" },
   slate:       { bg: "#f8fafc", ring: "#e2e8f0", text: "#475569", accent: "#94a3b8" },
 };
 
@@ -56,6 +60,8 @@ export const STAGGER = {
 
 const TYPE_ALIASES: Record<string, WordTypeColorKey> = {
   verb: "verb",
+  verb_modal: "verb_modal",
+  verb_compound: "verb_compound",
   noun: "noun",
   adjective: "adjective",
   adj: "adjective",
@@ -72,7 +78,7 @@ export function colorsForType(type?: string | null): ColorSwatch {
   return COLORS[TYPE_ALIASES[type.toLowerCase()] ?? "slate" as WordTypeColorKey] ?? COLORS.slate;
 }
 
-export const PRIMARY_GRADIENT = "linear-gradient(135deg, #4f46e5, #6366f1)";
+export const PRIMARY_GRADIENT = "linear-gradient(135deg, #9d0044, #bb0051)";
 export const BG_GRADIENT =
   "linear-gradient(135deg, #f8fafc 0%, rgba(219,234,254,0.25) 50%, rgba(237,233,254,0.25) 100%)";
 export const FONT_STACK =

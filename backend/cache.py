@@ -32,6 +32,7 @@ class CachedTranslation:
     related_words: list | None = None
     collocation_pattern: str | None = None
     word_type: str | None = None
+    verb_variant: str | None = None
 
 
 class TranslationCache:

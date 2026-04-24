@@ -229,10 +229,10 @@ export function Step2Highlight() {
       </div>
 
       <h2 className="text-[15px] font-extrabold text-slate-800 mt-3 mb-0.5">
-        Select, and we translate
+        Select a word, get the full context
       </h2>
       <p className="text-[11px] text-slate-500 leading-relaxed max-w-[280px]">
-        Highlight any word — Contxtly captures the whole expression in context.
+        Contxtly detects the full expression around your word — even when it's split across the sentence.
       </p>
     </>
   );

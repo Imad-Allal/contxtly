@@ -10,6 +10,7 @@ const ICONS = {
 // ── Type system ──────────────────────────────────────────────────────────────
 
 const TYPE_INFO = {
+  verb:             { cls: "contxtly-verb",        label: "Verb" },
   conjugated_verb:  { cls: "contxtly-verb",        label: "Verb" },
   separable_prefix: { cls: "contxtly-verb",        label: "Sep. Verb" },
   collocation_verb: { cls: "contxtly-collocation", label: "Collocation" },
@@ -25,7 +26,14 @@ function getTypeInfo(translation) {
   if (!translation || typeof translation !== "object") return null;
   // Use explicit word_type first
   if (translation.word_type && TYPE_INFO[translation.word_type]) {
-    return TYPE_INFO[translation.word_type];
+    const info = TYPE_INFO[translation.word_type];
+    if (translation.verb_variant === "modal") {
+      return { cls: "contxtly-verb-modal", label: "Modal + Verb" };
+    }
+    if (translation.verb_variant === "compound") {
+      return { cls: "contxtly-verb-compound", label: "Perfekt" };
+    }
+    return info;
   }
   // Fallback inference from available fields
   if (translation.collocation_pattern) {
@@ -176,7 +184,7 @@ export function removeTooltip() {
   tooltip = null;
 }
 
-export function updateTooltipLogin() {
+export function updateTooltipLogin(onLoggedIn) {
   if (!tooltip) return;
   tooltip.className = "contxtly-tooltip contxtly-tooltip-auth";
   tooltip.innerHTML = `
@@ -184,10 +192,20 @@ export function updateTooltipLogin() {
       <span>Sign in to translate</span>
       <button class="contxtly-auth-btn" id="contxtly-login-btn">Sign in with Google</button>
     </div>`;
-  tooltip.querySelector("#contxtly-login-btn").onclick = (e) => {
+  tooltip.querySelector("#contxtly-login-btn").onclick = async (e) => {
     e.stopPropagation();
-    chrome.runtime.sendMessage({ action: "login" });
-    removeTooltip();
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = "Signing in…";
+    try {
+      const res = await chrome.runtime.sendMessage({ action: "login" });
+      if (res?.error) throw new Error(res.error);
+      if (onLoggedIn) onLoggedIn();
+      else removeTooltip();
+    } catch {
+      btn.disabled = false;
+      btn.textContent = "Sign in with Google";
+    }
   };
 }
 
@@ -232,6 +250,16 @@ export function showTranslationTooltip(x, y, content, onDelete) {
   document.body.appendChild(tooltip);
 }
 
+export function showHint(x, y, message) {
+  removeTooltip();
+  tooltip = document.createElement("div");
+  tooltip.className = "contxtly-tooltip contxtly-tooltip-hint";
+  tooltip.textContent = message;
+  setPosition(tooltip, x, y, 260, 60);
+  document.body.appendChild(tooltip);
+  setTimeout(() => { if (tooltip?.classList.contains("contxtly-tooltip-hint")) removeTooltip(); }, 2200);
+}
+
 export function isOwnElement(el) {
   return button?.contains(el) || tooltip?.contains(el) || el.classList?.contains("contxtly-highlight");
 }
@@ -240,7 +268,9 @@ export function isOwnElement(el) {
 
 const HIGHLIGHT_COLORS = {
   "":                     { bg: "rgba(254,249,195,0.55)", bgHover: "rgba(254,249,195,0.85)", shadow: "inset 0 -2px 0 rgba(234,179,8,0.55)",    shadowHover: "inset 0 -2px 0 rgba(234,179,8,0.85)" },
-  "contxtly-verb":        { bg: "rgba(219,234,254,0.45)", bgHover: "rgba(219,234,254,0.75)", shadow: "inset 0 -2px 0 rgba(96,165,250,0.55)",   shadowHover: "inset 0 -2px 0 rgba(96,165,250,0.85)" },
+  "contxtly-verb":          { bg: "rgba(219,234,254,0.45)", bgHover: "rgba(219,234,254,0.75)", shadow: "inset 0 -2px 0 rgba(96,165,250,0.55)",   shadowHover: "inset 0 -2px 0 rgba(96,165,250,0.85)" },
+  "contxtly-verb-modal":    { bg: "rgba(224,242,254,0.7)",  bgHover: "rgba(186,230,253,0.9)",  shadow: "inset 0 -2px 0 rgba(2,132,199,0.9)",   shadowHover: "inset 0 -2px 0 rgba(3,105,161,1)",   color: "#0c4a6e" },
+  "contxtly-verb-compound": { bg: "rgba(30,64,175,0.18)",   bgHover: "rgba(30,64,175,0.3)",    shadow: "inset 0 -2px 0 rgba(30,58,138,0.9)",   shadowHover: "inset 0 -2px 0 rgba(30,58,138,1)" },
   "contxtly-noun":        { bg: "rgba(237,233,254,0.45)", bgHover: "rgba(237,233,254,0.75)", shadow: "inset 0 -2px 0 rgba(167,139,250,0.55)",  shadowHover: "inset 0 -2px 0 rgba(167,139,250,0.85)" },
   "contxtly-adjective":   { bg: "rgba(254,243,199,0.45)", bgHover: "rgba(254,243,199,0.75)", shadow: "inset 0 -2px 0 rgba(245,158,11,0.55)",   shadowHover: "inset 0 -2px 0 rgba(245,158,11,0.85)" },
   "contxtly-collocation": { bg: "rgba(187,0,81,0.1)",     bgHover: "rgba(187,0,81,0.18)",   shadow: "inset 0 -2px 0 rgba(187,0,81,0.55)",     shadowHover: "inset 0 -2px 0 rgba(187,0,81,0.85)" },
@@ -263,7 +293,7 @@ export function applyHighlightStyle(el, typeClass) {
   el.style.cursor = "pointer";
   el.style.webkitBoxDecorationBreak = "clone";
   el.style.boxDecorationBreak = "clone";
-  el.style.color = "inherit";
+  el.style.color = c.color || "inherit";
   // Hover via JS events (inline styles block CSS :hover)
   el.addEventListener("mouseenter", () => {
     el.style.background = c.bgHover;

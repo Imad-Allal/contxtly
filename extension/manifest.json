@@ -1,13 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Contxtly",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0oyyc1+w5LT76naG6YzOGEgFFB412JOVc/DxQPBhSiFi20ao/hUgBA2AoRYu4DUHZ3+lMV9zCdOeQ0wkl2+n1WZyZppc+9q4ZPacB+VlR1HKp+gFHxbKrjrZ83LMzrxlw0JaC05voVvacBnAqE+hP3mdNLoq1wy+A6/1TRyIsFIFU/Aj2GMJ34GOtMvF3AmHud77Cp5WOmAIaqY0FJv7WtPYLx39CGO0f1im4W0ZFPpMkLnvh1PeyJsRNoCHnG6H5GoOVIex0asw0s5O7wUpHWWUf76S2gpwWU+hDqimXal0XHzBKuwuQ6W1NfZ1IPyWXnkWiDZWKTsKzIIiCRLZ7wIDAQAB",
   "version": "1.0.0",
-  "description": "Contextual translator",
-  "permissions": ["storage", "identity", "tabs"],
+  "description": "Translate words in context as you browse. Save vocab and review with spaced repetition to learn languages naturally",
+  "permissions": ["storage", "identity"],
   "host_permissions": [
     "http://localhost:8000/*",
+    
     "https://api.contxtly.xyz/*",
-    "https://*.supabase.co/*"
+    "https://*.supabase.co/*",
+    "http://localhost:8765/*"
   ],
   "background": {
     "service_worker": "background.js"

@@ -22,6 +22,7 @@ class TranslationResult:
     related_words: list[dict] | None = None
     collocation_pattern: str | None = None
     word_type: str | None = None  # simple, conjugated_verb, plural_noun, noun, separable_prefix, collocation_verb, collocation_prep, fixed_expression, compound
+    verb_variant: str | None = None  # modal | compound | None — UI shading hint
 
     def to_dict(self) -> dict:
         result = {"translation": self.translation}
@@ -39,6 +40,8 @@ class TranslationResult:
             result["collocation_pattern"] = self.collocation_pattern
         if self.word_type:
             result["word_type"] = self.word_type
+        if self.verb_variant:
+            result["verb_variant"] = self.verb_variant
         return result
 
 
@@ -102,6 +105,7 @@ def translate_pipeline(
             related_words=cached.related_words,
             collocation_pattern=cached.collocation_pattern,
             word_type=cached.word_type,
+            verb_variant=cached.verb_variant,
         )
 
     # Check if context translation is cached (different word, same context)
@@ -205,6 +209,8 @@ def translate_pipeline(
     if compound_parts and len(compound_parts) > 1:
         final_word_type = "compound"
 
+    verb_variant = la.verb_variant if la else None
+
     # Store in cache
     cache.set(
         text, context, detected_lang, target_lang,
@@ -217,6 +223,7 @@ def translate_pipeline(
             related_words=related_words if related_words else None,
             collocation_pattern=collocation_pattern,
             word_type=final_word_type,
+            verb_variant=verb_variant,
         ),
     )
 
@@ -229,6 +236,7 @@ def translate_pipeline(
         related_words=related_words if related_words else None,
         collocation_pattern=collocation_pattern,
         word_type=final_word_type,
+        verb_variant=verb_variant,
     )
     log.info(f"[PIPELINE] Final result: {result.to_dict()}")
 

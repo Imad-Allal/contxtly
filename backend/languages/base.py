@@ -93,6 +93,7 @@ class LanguageAnalysis:
     pattern: str | None = None
     llm_hint: str | None = None
     modal_verb: str | None = None
+    verb_variant: str | None = None
     breakdown_fn: Callable | None = None
 
 

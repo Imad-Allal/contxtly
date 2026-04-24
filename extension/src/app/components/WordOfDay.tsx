@@ -30,6 +30,8 @@ function hash(s: string): number {
 function typeKeyOf(w: Word): WordTypeColorKey | null {
   const t = typeof w.translation === "object" ? (w.translation as TranslationData) : null;
   if (!t) return null;
+  if (t.verb_variant === "modal") return "verb_modal";
+  if (t.verb_variant === "compound") return "verb_compound";
   if (t.word_type && WORD_TYPE_MAP[t.word_type]) return WORD_TYPE_MAP[t.word_type];
   if (t.collocation_pattern) return "collocation";
   return null;

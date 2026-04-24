@@ -8,8 +8,9 @@ type Format = "anki" | "csv" | "json" | "quizlet";
 
 interface Props {
   words: Word[];
+  selectedWords: Word[];
   isExporting: boolean;
-  onAnki: () => void;
+  onAnki: (words: Word[]) => void;
 }
 
 function translationText(w: Word): string {
@@ -49,10 +50,11 @@ function toQuizlet(words: Word[]): string {
   return words.map((w) => `${w.text}\t${translationText(w)}`).join("\n");
 }
 
-export function ExportMenu({ words, isExporting, onAnki }: Props) {
+export function ExportMenu({ words, selectedWords, isExporting, onAnki }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const isEmpty = words.length === 0;
+  const target = selectedWords.length > 0 ? selectedWords : words;
+  const isEmpty = target.length === 0;
   const disabled = isExporting || isEmpty;
 
   useEffect(() => {
@@ -69,11 +71,11 @@ export function ExportMenu({ words, isExporting, onAnki }: Props) {
 
   function run(fmt: Format) {
     setOpen(false);
-    if (fmt === "anki") return onAnki();
+    if (fmt === "anki") return onAnki(target);
     const date = new Date().toISOString().slice(0, 10);
-    if (fmt === "csv") download(`contxtly-${date}.csv`, toCSV(words), "text/csv");
-    else if (fmt === "json") download(`contxtly-${date}.json`, JSON.stringify(words, null, 2), "application/json");
-    else if (fmt === "quizlet") download(`contxtly-${date}.txt`, toQuizlet(words), "text/plain");
+    if (fmt === "csv") download(`contxtly-${date}.csv`, toCSV(target), "text/csv");
+    else if (fmt === "json") download(`contxtly-${date}.json`, JSON.stringify(target, null, 2), "application/json");
+    else if (fmt === "quizlet") download(`contxtly-${date}.txt`, toQuizlet(target), "text/plain");
   }
 
   const OPTIONS: { fmt: Format; label: string; desc: string; icon: typeof FileDown }[] = [

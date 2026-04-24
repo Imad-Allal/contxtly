@@ -11,6 +11,7 @@ export interface TranslationData {
   collocation_pattern?: string;
   related_words?: Array<{ text: string }>;
   word_type?: string;
+  verb_variant?: "modal" | "compound";
 }
 
 export interface Word {

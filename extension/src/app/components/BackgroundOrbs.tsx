@@ -16,7 +16,7 @@ const ORBS = [
     delay: 2.5,
   },
   {
-    className: "w-64 h-64 bg-indigo-400/[0.06]",
+    className: "w-64 h-64 bg-rose-400/[0.06]",
     style: { bottom: "-50px", left: "25%" },
     animate: { x: [0, 16, -24, 0], y: [0, 24, -10, 0], scale: [1, 1.05, 0.96, 1] },
     duration: 13,

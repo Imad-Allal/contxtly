@@ -3,6 +3,7 @@ import type { Word } from "../types";
 import { getWordKey } from "./useWords";
 
 const STORAGE_KEY = "review_state";
+const MIN = 60_000;
 const DAY = 86_400_000;
 
 export type Grade = "again" | "hard" | "good" | "easy";
@@ -23,25 +24,41 @@ function defaultEntry(now: number): ReviewEntry {
 
 function applyGrade(entry: ReviewEntry, grade: Grade, now: number): ReviewEntry {
   let { ease, interval, repetitions } = entry;
+  let dueDelta: number;
   switch (grade) {
     case "again":
       repetitions = 0;
-      interval = 1;
+      interval = 0;
       ease = Math.max(1.3, ease - 0.2);
+      dueDelta = 1 * MIN;
       break;
     case "hard":
-      repetitions += 1;
-      interval = Math.max(1, Math.round((interval || 1) * 1.2));
       ease = Math.max(1.3, ease - 0.15);
+      if (repetitions < 1) {
+        dueDelta = 6 * MIN;
+      } else {
+        interval = Math.max(1, Math.round((interval || 1) * 1.2));
+        dueDelta = interval * DAY;
+      }
+      repetitions += 1;
       break;
     case "good":
       repetitions += 1;
-      interval = repetitions === 1 ? 1 : repetitions === 2 ? 3 : Math.round(interval * ease);
+      if (repetitions === 1) {
+        dueDelta = 10 * MIN;
+      } else if (repetitions === 2) {
+        interval = 1;
+        dueDelta = interval * DAY;
+      } else {
+        interval = Math.round((interval || 1) * ease);
+        dueDelta = interval * DAY;
+      }
       break;
     case "easy":
       repetitions += 1;
-      interval = repetitions === 1 ? 2 : Math.round((interval || 1) * ease * 1.3);
+      interval = repetitions === 1 ? 4 : Math.round((interval || 1) * ease * 1.3);
       ease = ease + 0.15;
+      dueDelta = interval * DAY;
       break;
   }
   return {
@@ -49,7 +66,7 @@ function applyGrade(entry: ReviewEntry, grade: Grade, now: number): ReviewEntry 
     interval,
     repetitions,
     lastReviewedAt: now,
-    dueAt: now + interval * DAY,
+    dueAt: now + dueDelta,
   };
 }
 
@@ -73,6 +90,8 @@ export function useReview(words: Word[]) {
     if (!loaded) return [];
     const now = Date.now();
     return words.filter((w) => {
+      const wordCount = (w.text || "").trim().split(/\s+/).filter(Boolean).length;
+      if (wordCount > 3) return false;
       const key = getWordKey(w);
       const e = state[key];
       if (!e) return true;

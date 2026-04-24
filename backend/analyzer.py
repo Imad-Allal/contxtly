@@ -125,6 +125,9 @@ def classify_word_type(token, lang: str, effective_pos: str | None = None, corre
         if morph.get("VerbForm") != "Inf":
             return "conjugated_verb"
 
+    if pos == "VERB":
+        return "verb"
+
     # Nouns - use language module for classification
     if pos == "NOUN":
         lang_module = get_language(lang)
@@ -221,6 +224,10 @@ def analyze_word(text: str, context: str = "", source_lang: str = "auto", text_o
     if lang == "de" and token.pos_ == "NOUN" and token.text[0].islower():
         sm_lemma = simplemma.lemmatize(token.text.lower(), lang="de")
         if sm_lemma and sm_lemma != token.text.lower() and not sm_lemma[0].isupper():
+            effective_pos = "VERB"
+    if lang == "de" and token.tag_ == "ADJD" and token.dep_ == "oc" and token.head.lemma_ in ("haben", "sein"):
+        sm_lemma = simplemma.lemmatize(token.text.lower(), lang="de")
+        if sm_lemma and sm_lemma != token.text.lower():
             effective_pos = "VERB"
 
     morph = parse_morphology(token.morph)

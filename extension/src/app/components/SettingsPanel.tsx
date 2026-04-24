@@ -1,8 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Settings2 } from "lucide-react";
+import { Crown, Globe, SlidersHorizontal } from "lucide-react";
+import type { ReactNode } from "react";
 import { LANGUAGES } from "../constants";
 import { getCheckoutUrl, getPortalUrl, openUrl } from "../chrome-api";
 import type { AuthState } from "../hooks/useAuth";
+import { PRIMARY_GRADIENT } from "../theme";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -13,11 +15,31 @@ interface SettingsPanelProps {
   auth: AuthState;
 }
 
-function SectionLabel({ text }: { text: string }) {
+function Row({
+  icon,
+  label,
+  sublabel,
+  children,
+}: {
+  icon: ReactNode;
+  label: string;
+  sublabel?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex items-center gap-1.5 mb-1.5">
-      <div className="h-[3px] w-3.5 rounded-full bg-slate-400" />
-      <label className="text-[9.5px] font-bold uppercase tracking-widest text-slate-500">{text}</label>
+    <div className="flex items-center justify-between gap-3 py-2.5">
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 flex-shrink-0">
+          {icon}
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-[12px] font-semibold text-slate-700 leading-tight">{label}</span>
+          {sublabel && (
+            <span className="text-[10px] text-slate-400 leading-tight mt-0.5 truncate">{sublabel}</span>
+          )}
+        </div>
+      </div>
+      <div className="flex-shrink-0">{children}</div>
     </div>
   );
 }
@@ -46,77 +68,75 @@ export function SettingsPanel({ open, targetLang, mode, onLangChange, onModeChan
           style={{ overflow: "hidden" }}
         >
           <div
-            className="px-4 py-3 border-b border-white/60 space-y-3"
+            className="px-4 py-1 border-b border-white/60 divide-y divide-slate-100"
             style={{ backdropFilter: "blur(12px)", background: "rgba(248,250,252,0.7)" }}
           >
-            <div>
-              <SectionLabel text="Translate to" />
+            <Row icon={<Globe size={13} />} label="Language">
               <select
                 value={targetLang}
                 onChange={(e) => onLangChange(e.target.value)}
-                className="w-full px-3 py-2 text-[12px] rounded-xl border border-blue-100 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer font-medium"
-                style={{ background: "rgba(239,246,255,0.7)" }}
+                aria-label="Translate to"
+                className="px-3 py-1.5 text-[12px] font-semibold rounded-lg bg-white border border-slate-200 text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 cursor-pointer transition-all"
               >
                 {LANGUAGES.map((l) => (
                   <option key={l.code} value={l.code}>{l.label}</option>
                 ))}
               </select>
-            </div>
+            </Row>
 
-            <div>
-              <SectionLabel text="Translation mode" />
-              <select
-                value={mode}
-                onChange={(e) => onModeChange(e.target.value)}
-                className="w-full px-3 py-2 text-[12px] rounded-xl border border-purple-100 text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-200 transition-all cursor-pointer font-medium"
-                style={{ background: "rgba(245,243,255,0.7)" }}
-              >
-                <option value="simple">Simple</option>
-                <option value="smart">{"\u2728"} Smart (with context)</option>
-              </select>
-            </div>
-
-            {auth.loggedIn && (
-              <div>
-                <SectionLabel text="Subscription" />
-                <div
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                  style={{ background: isPro ? "rgba(237,233,254,0.7)" : "rgba(248,250,252,0.7)", border: `1px solid ${isPro ? "#ddd6fe" : "#e2e8f0"}` }}
-                >
-                  <div className="flex items-center gap-2">
-                    {isPro
-                      ? <Zap size={13} className="text-violet-500" />
-                      : <Settings2 size={13} className="text-slate-400" />
-                    }
-                    <span className="text-[12px] font-semibold" style={{ color: isPro ? "#5b21b6" : "#475569" }}>
-                      {isPro ? "Pro plan" : "Free plan"}
-                    </span>
-                    {!isPro && (
-                      <span className="text-[10px] text-slate-400">{auth.usage?.limit ?? 50} translations/day</span>
-                    )}
-                  </div>
-                  {isPro ? (
+            <Row icon={<SlidersHorizontal size={13} />} label="Mode" sublabel={mode === "smart" ? "Context-aware translation" : "Literal word-by-word"}>
+              <div className="relative inline-flex rounded-lg p-[2px] bg-slate-100 border border-slate-200">
+                {(["simple", "smart"] as const).map((m) => {
+                  const active = mode === m;
+                  return (
                     <button
-                      onClick={handleManage}
-                      className="text-[11px] font-semibold text-violet-600 hover:text-violet-800 transition-colors"
+                      key={m}
+                      onClick={() => onModeChange(m)}
+                      aria-pressed={active}
+                      className="relative px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors capitalize z-[1]"
+                      style={{ color: active ? "#9d0044" : "#64748b" }}
                     >
-                      Manage
+                      {active && (
+                        <motion.span
+                          layoutId="mode-pill"
+                          transition={{ type: "spring", stiffness: 320, damping: 26 }}
+                          className="absolute inset-0 rounded-md bg-white"
+                          style={{ zIndex: -1, boxShadow: "0 1px 2px rgba(15,23,42,0.08)" }}
+                        />
+                      )}
+                      {m}
                     </button>
-                  ) : (
-                    <motion.button
-                      whileHover={{ scale: 1.04 }}
-                      whileTap={{ scale: 0.96 }}
-                      onClick={handleSubscribe}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-white"
-                      style={{ background: "linear-gradient(135deg, #4f46e5, #6366f1)", boxShadow: "0 2px 8px rgba(99,102,241,0.3)" }}
-                    >
-                      <Zap size={10} />
-                      Upgrade
-                    </motion.button>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-            )}
+            </Row>
+
+            {/* {auth.loggedIn && (
+              <Row
+                icon={<Crown size={13} className={isPro ? "text-rose-600" : ""} />}
+                label={isPro ? "Pro plan" : "Free plan"}
+                sublabel={!isPro ? `${auth.usage?.limit ?? 50} translations/day` : undefined}
+              >
+                {isPro ? (
+                  <button
+                    onClick={handleManage}
+                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 transition-colors"
+                  >
+                    Manage
+                  </button>
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={handleSubscribe}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-white"
+                    style={{ background: PRIMARY_GRADIENT, boxShadow: "0 2px 8px rgba(187,0,81,0.3)" }}
+                  >
+                    Upgrade
+                  </motion.button>
+                )}
+              </Row>
+            )} */}
           </div>
         </motion.div>
       )}

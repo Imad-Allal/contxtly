@@ -18,21 +18,92 @@ const WORD_TYPE_MAP: Record<string, WordTypeColorKey> = {
 function typeKeyOf(w: Word): WordTypeColorKey | null {
   const t = typeof w.translation === "object" ? (w.translation as TranslationData) : null;
   if (!t) return null;
+  if (t.verb_variant === "modal") return "verb_modal";
+  if (t.verb_variant === "compound") return "verb_compound";
   if (t.word_type && WORD_TYPE_MAP[t.word_type]) return WORD_TYPE_MAP[t.word_type];
   if (t.collocation_pattern) return "collocation";
   return null;
 }
 
-const PUNCT = /[,.?!]/g;
+function displayForm(w: Word, t: TranslationData | null): string {
+  if (!t) return w.lemma || w.text;
+  if (t.collocation_pattern) {
+    const m = t.collocation_pattern.match(/^(\S+)\s*\+\s*(\S+)$/);
+    if (m) {
+      const [, verb, prep] = m;
+      return `${prep} etwas ${verb}`;
+    }
+    return t.collocation_pattern;
+  }
+  return w.lemma || w.text;
+}
 
-function trimToSentence(raw: string | undefined): string {
+const STOPPER = /[,.;:!?—–]|\s-\s/g;
+
+const TYPE_LABELS: Record<string, string> = {
+  verb: "Verb",
+  verb_modal: "Modal",
+  verb_compound: "Perfekt",
+  noun: "Noun",
+  adjective: "Adjective",
+  collocation: "Collocation",
+  expression: "Expression",
+  compound: "Compound",
+};
+const MIN_WORDS = 5;
+
+function trimToSentence(raw: string | undefined, word: string): string {
   if (!raw) return "";
   const text = raw.trim();
-  const matches = [...text.matchAll(PUNCT)];
-  if (matches.length < 2) return text;
-  const first = matches[0].index ?? 0;
-  const last = (matches[matches.length - 1].index ?? 0) + 1;
-  return text.slice(first + 1, last).trim();
+  if (!word) return text;
+
+  const stops: number[] = [-1];
+  for (const m of text.matchAll(STOPPER)) {
+    if (m.index === undefined) continue;
+    if (m[0] === "." && m.index > 0 && /\d/.test(text[m.index - 1])) continue;
+    stops.push(m.index);
+  }
+  stops.push(text.length);
+
+  const wIdx = text.toLowerCase().indexOf(word.toLowerCase());
+  if (wIdx < 0) return text;
+  const wEnd = wIdx + word.length;
+
+  let L = 0;
+  for (let i = 0; i < stops.length; i++) {
+    if (stops[i] < wIdx) L = i;
+  }
+  let R = stops.length - 1;
+  for (let i = 0; i < stops.length; i++) {
+    if (stops[i] >= wEnd) { R = i; break; }
+  }
+
+  const slice = (l: number, r: number) => text.slice(stops[l] + 1, stops[r]).trim();
+  const count = (s: string) => (s ? s.split(/\s+/).filter(Boolean).length : 0);
+
+  let result = slice(L, R);
+  while (count(result) < MIN_WORDS && (L > 0 || R < stops.length - 1)) {
+    if (R < stops.length - 1) R++;
+    else L--;
+    result = slice(L, R);
+  }
+  return result;
+}
+
+function highlightWord(sentence: string, word: string) {
+  if (!word) return sentence;
+  const idx = sentence.toLowerCase().indexOf(word.toLowerCase());
+  if (idx < 0) return sentence;
+  const before = sentence.slice(0, idx);
+  const match = sentence.slice(idx, idx + word.length);
+  const after = sentence.slice(idx + word.length);
+  return (
+    <>
+      {before}
+      <span className="font-bold text-slate-700">{match}</span>
+      {after}
+    </>
+  );
 }
 
 const GRADES: { value: Grade; label: string; hint: string; color: string; text: string }[] = [
@@ -64,7 +135,8 @@ export function ReviewView({ words, sourceLang }: { words: Word[]; sourceLang?: 
   const t = typeof word.translation === "object" ? (word.translation as TranslationData) : null;
   const translation = t?.translation || (typeof word.translation === "string" ? word.translation : "");
   const meaning = t?.meaning;
-  const context = trimToSentence(word.context || t?.context_translation?.source);
+  const display = displayForm(word, t);
+  const context = trimToSentence(word.context || t?.context_translation?.source, word.text);
 
   async function onGrade(g: Grade) {
     await grade(word, g);
@@ -118,7 +190,7 @@ export function ReviewView({ words, sourceLang }: { words: Word[]; sourceLang?: 
                 style={{ background: swatch.bg, color: swatch.text, border: `1px solid ${swatch.ring}` }}
               >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: swatch.accent }} />
-                {typeKey}
+                {TYPE_LABELS[typeKey] ?? typeKey}
               </span>
             )}
             <motion.button
@@ -126,7 +198,7 @@ export function ReviewView({ words, sourceLang }: { words: Word[]; sourceLang?: 
               whileTap={{ scale: 0.92 }}
               onClick={pronounce}
               aria-label={`Pronounce ${word.text}`}
-              className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:bg-white transition-colors"
+              className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-white transition-colors"
             >
               <Volume2 size={13} />
             </motion.button>
@@ -134,11 +206,11 @@ export function ReviewView({ words, sourceLang }: { words: Word[]; sourceLang?: 
 
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <h2 className="text-[26px] font-extrabold mb-2" style={{ color: swatch.text }}>
-              {word.text}
+              {display}
             </h2>
             {context && (
               <p className="text-[12px] italic text-slate-500 leading-relaxed max-w-[280px] mb-3">
-                "{context}"
+                "{highlightWord(context, word.text)}"
               </p>
             )}
 

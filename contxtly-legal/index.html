@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contxtly — Context-aware translations for language learners</title>
+  <meta name="description" content="A Chrome extension that turns any webpage into language-learning practice. Highlight a word, get an in-context translation, and save it to your vocabulary list." />
+  <link rel="icon" type="image/svg+xml" href="/contxtly.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+  <link rel="alternate icon" href="/favicon.ico" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #4f46e5; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    header .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    header .logo { width: 32px; height: 32px; }
+    header h1 { font-size: 16px; font-weight: 700; color: #0f172a; }
+    header nav { margin-left: auto; display: flex; gap: 18px; }
+    header nav a { font-size: 13px; color: #475569; font-weight: 500; }
+    header nav a:hover { color: #4f46e5; text-decoration: none; }
+
+    main { max-width: 720px; margin: 64px auto; padding: 0 24px 80px; }
+
+    .hero { text-align: center; margin-bottom: 56px; }
+    .hero h2 { font-size: 36px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 14px; }
+    .hero p { font-size: 16px; color: #475569; max-width: 540px; margin: 0 auto 24px; }
+    .btn {
+      display: inline-block;
+      background: #4f46e5;
+      color: #fff !important;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .btn:hover { background: #4338ca; text-decoration: none; }
+
+    h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #1e293b; }
+    p { font-size: 14px; color: #475569; margin-bottom: 10px; }
+    ul { padding-left: 20px; margin-bottom: 10px; }
+    ul li { font-size: 14px; color: #475569; margin-bottom: 4px; }
+
+    .section { border-top: 1px solid #f1f5f9; padding-top: 28px; margin-top: 28px; }
+
+    footer {
+      text-align: center;
+      padding: 28px 24px;
+      color: #94a3b8;
+      font-size: 12px;
+      border-top: 1px solid #e2e8f0;
+      background: #fff;
+    }
+    footer a { color: #64748b; margin: 0 8px; }
+
+    @media (max-width: 520px) {
+      .hero h2 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="index.html">
+      <img class="logo" src="contxtly.svg" alt="Contxtly" />
+      <h1>Contxtly</h1>
+    </a>
+    <nav>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h2>Read. Highlight. Learn.</h2>
+      <p>A Chrome extension that translates any word in context, shows you the grammar, and saves it to your vocabulary list.</p>
+      <a class="btn" href="#">Get Contxtly</a>
+    </section>
+
+    <div class="section">
+      <h3>What it does</h3>
+      <ul>
+        <li>Highlight a word on any webpage — get an instant, context-aware translation.</li>
+        <li>See a grammar breakdown of the full sentence it came from.</li>
+        <li>Save words to a personal vocabulary list, synced across devices.</li>
+        <li>Export to Anki when you're ready to review.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h3>Contact</h3>
+      <p>Questions, feedback, or billing help: <a href="mailto:pro.imadallal@gmail.com">pro.imadallal@gmail.com</a>.</p>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 Contxtly · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a>
+  </footer>
+</body>
+</html>

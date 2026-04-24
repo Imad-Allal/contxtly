@@ -21,7 +21,8 @@ interface ToolbarProps {
   typeFilter: WordTypeFilter;
   onTypeFilterChange: (v: WordTypeFilter) => void;
   isExporting: boolean;
-  onExport: () => void;
+  onExport: (words: Word[]) => void;
+  selectedWords: Word[];
   allSelected: boolean;
   onToggleSelectAll: () => void;
   selectedCount: number;
@@ -34,7 +35,7 @@ interface ToolbarProps {
 export function Toolbar({
   search, onSearchChange, typeFilter, onTypeFilterChange,
   isExporting, onExport, allSelected, onToggleSelectAll,
-  selectedCount, onDelete, onOpenTrash, searchInputRef, words,
+  selectedCount, onDelete, onOpenTrash, searchInputRef, words, selectedWords,
 }: ToolbarProps) {
   return (
     <div
@@ -81,7 +82,7 @@ export function Toolbar({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           aria-label="Search saved words"
-          className="w-full pl-7 pr-6 py-1.5 text-[12px] rounded-xl border border-slate-200 bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
+          className="w-full pl-7 pr-6 py-1.5 text-[12px] rounded-xl border border-slate-200 bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100 transition-all font-medium"
         />
         <AnimatePresence>
           {search && (
@@ -100,7 +101,7 @@ export function Toolbar({
         </AnimatePresence>
       </div>
 
-      <ExportMenu words={words} isExporting={isExporting} onAnki={onExport} />
+      <ExportMenu words={words} selectedWords={selectedWords} isExporting={isExporting} onAnki={onExport} />
 
       <motion.button
         whileHover={{ scale: 1.06 }}
@@ -110,7 +111,7 @@ export function Toolbar({
         title={allSelected ? "Deselect all" : "Select all"}
         className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all ${
           allSelected
-            ? "bg-indigo-50 border-indigo-200 text-indigo-600"
+            ? "bg-rose-50 border-rose-200 text-rose-600"
             : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
         }`}
       >
@@ -154,7 +155,7 @@ export function Toolbar({
             onClick={onOpenTrash}
             aria-label="View trash"
             title="View trash"
-            className="w-8 h-8 rounded-xl flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-500 transition-all"
+            className="w-8 h-8 rounded-xl flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-500 transition-all"
           >
             <ArchiveX size={14} />
           </motion.button>

@@ -1,58 +1,118 @@
 import { motion } from "framer-motion";
-import { List, Repeat, BarChart3, Layers } from "lucide-react";
-import { COLORS } from "../../../theme";
+import { LANGUAGES } from "../../../constants";
+import { COLORS, ELEVATION, RADIUS } from "../../../theme";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 
-const FEATURES = [
-  { icon: List, title: "Your list", body: "Browse, filter, and search every word you save.", color: COLORS.primary },
-  { icon: Repeat, title: "Review mode", body: "Daily spaced-repetition so nothing slips away.", color: COLORS.noun },
-  { icon: BarChart3, title: "Stats", body: "Track streaks and see progress by word type.", color: COLORS.compound },
-  { icon: Layers, title: "Export", body: "Send to Anki, CSV, JSON, or Quizlet anytime.", color: COLORS.adjective },
-];
+interface PreviewEntry {
+  source: string;
+  sourceLang: string;
+  translation: string;
+}
 
-export function Step4Review() {
+const PREVIEW: Record<string, PreviewEntry> = {
+  en: { source: "teilnehmen", sourceLang: "de", translation: "to take part in" },
+  es: { source: "teilnehmen", sourceLang: "de", translation: "participar en" },
+  fr: { source: "teilnehmen", sourceLang: "de", translation: "participer à" },
+  de: { source: "curiosity",  sourceLang: "en", translation: "Neugier" },
+  it: { source: "teilnehmen", sourceLang: "de", translation: "partecipare a" },
+  pt: { source: "teilnehmen", sourceLang: "de", translation: "participar de" },
+  zh: { source: "teilnehmen", sourceLang: "de", translation: "参加" },
+  ja: { source: "teilnehmen", sourceLang: "de", translation: "参加する" },
+  ko: { source: "teilnehmen", sourceLang: "de", translation: "참가하다" },
+  ar: { source: "teilnehmen", sourceLang: "de", translation: "يشارك في" },
+  ru: { source: "teilnehmen", sourceLang: "de", translation: "участвовать" },
+};
+
+interface Props {
+  targetLang: string;
+  onLangChange: (lang: string) => void;
+}
+
+export function Step4Review({ targetLang, onLangChange }: Props) {
   const reduced = useReducedMotion();
+  const preview = PREVIEW[targetLang] ?? PREVIEW.en;
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2 w-full max-w-[280px] mb-5">
-        {FEATURES.map((f, i) => {
-          const Icon = f.icon;
+      <div className="grid grid-cols-3 gap-1.5 w-full max-w-[280px] mb-3">
+        {LANGUAGES.map((l, i) => {
+          const active = targetLang === l.code;
           return (
-            <motion.div
-              key={f.title}
-              initial={{ opacity: 0, y: 8 }}
+            <motion.button
+              key={l.code}
+              onClick={() => onLangChange(l.code)}
+              initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: reduced ? 0 : i * 0.07, duration: 0.3 }}
-              className="p-2.5 text-left"
-              style={{
-                borderRadius: 12,
-                background: f.color.bg,
-                border: `1px solid ${f.color.ring}`,
-              }}
+              transition={{ delay: reduced ? 0 : i * 0.02, duration: 0.2 }}
+              whileTap={{ scale: 0.96 }}
+              className="relative px-2 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors"
+              style={
+                active
+                  ? {
+                      background: COLORS.primary.bg,
+                      color: COLORS.primary.text,
+                      borderColor: COLORS.primary.ring,
+                    }
+                  : {
+                      background: "rgba(255,255,255,0.7)",
+                      color: "#475569",
+                      borderColor: "#e2e8f0",
+                    }
+              }
             >
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center mb-1.5"
-                style={{ background: "white", color: f.color.accent }}
-              >
-                <Icon size={14} strokeWidth={2.2} />
-              </div>
-              <p className="text-[11px] font-bold mb-0.5" style={{ color: f.color.text }}>
-                {f.title}
-              </p>
-              <p className="text-[10px] leading-snug" style={{ color: f.color.text, opacity: 0.75 }}>
-                {f.body}
-              </p>
-            </motion.div>
+              {l.label}
+            </motion.button>
           );
         })}
       </div>
 
-      <h2 className="text-[18px] font-extrabold text-slate-800 mb-1">
-        You're all set
+      <motion.div
+        key={targetLang}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.22 }}
+        className="relative w-full max-w-[280px] overflow-hidden text-left"
+        style={{
+          borderRadius: RADIUS.lg,
+          background: "#ffffff",
+          border: `1px solid ${COLORS.primary.ring}`,
+          boxShadow: ELEVATION[2],
+        }}
+      >
+        <div
+          className="absolute left-0 top-0 bottom-0"
+          style={{ width: 4, background: COLORS.primary.accent }}
+        />
+        <div className="px-3 py-2.5 pl-4">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-[1px] text-[8.5px] font-bold uppercase tracking-widest rounded"
+              style={{
+                background: COLORS.primary.bg,
+                color: COLORS.primary.text,
+                border: `1px solid ${COLORS.primary.ring}`,
+              }}
+            >
+              Translation
+            </span>
+            <span className="text-[9px] text-slate-400 font-semibold uppercase">
+              {preview.sourceLang}
+            </span>
+          </div>
+          <p className="text-[13px] font-extrabold text-slate-800 leading-tight">
+            {preview.source}
+          </p>
+          <p className="text-[11px] text-slate-500 leading-snug mt-0.5">
+            → {preview.translation}
+          </p>
+        </div>
+      </motion.div>
+
+      <h2 className="text-[15px] font-extrabold text-slate-800 mt-4">
+        Pick your language
       </h2>
-      <p className="text-[12.5px] text-slate-500 leading-relaxed max-w-[280px]">
-        Press <kbd className="px-1 py-0.5 text-[10px] font-mono bg-slate-100 rounded border border-slate-200">?</kbd> anytime to see keyboard shortcuts.
+      <p className="text-[11px] text-slate-500 leading-relaxed max-w-[280px]">
+        Every translation is delivered in this language. You can change it anytime in settings.
       </p>
     </>
   );

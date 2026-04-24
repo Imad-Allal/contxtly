@@ -15,6 +15,7 @@ from auth import get_current_user
 from config import settings
 from db import get_db, get_usage, increment_usage
 from pipeline import translate_pipeline
+from translator import translate_simple
 
 stripe.api_key = settings.stripe_secret_key
 
@@ -54,8 +55,19 @@ class TranslateRequest(BaseModel):
     text_offset: int | None = None
 
 
+MAX_WORDS = 8
+PHRASE_MIN_WORDS = 3
+
+
 @app.post("/translate")
 async def translate(req: TranslateRequest, user_id: str = Depends(get_current_user)):
+    word_count = len((req.text or "").split())
+    if word_count == 0 or word_count > MAX_WORDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": f"Selection must be 1–{MAX_WORDS} words.", "code": "TOO_LONG"},
+        )
+
     used, limit, _plan, _cust = get_usage(user_id)
     if used >= limit:
         raise HTTPException(
@@ -65,18 +77,26 @@ async def translate(req: TranslateRequest, user_id: str = Depends(get_current_us
 
     try:
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            partial(
-                translate_pipeline,
-                text=req.text,
-                context=req.context or "",
-                source_lang=req.source_lang,
-                target_lang=req.target_lang,
-                mode=req.mode,
-                text_offset=req.text_offset,
-            ),
-        )
+        if word_count >= PHRASE_MIN_WORDS:
+            simple = await loop.run_in_executor(
+                None,
+                partial(translate_simple, req.text, req.source_lang, req.target_lang),
+            )
+            response = {"translation": simple["translation"]}
+        else:
+            result = await loop.run_in_executor(
+                None,
+                partial(
+                    translate_pipeline,
+                    text=req.text,
+                    context=req.context or "",
+                    source_lang=req.source_lang,
+                    target_lang=req.target_lang,
+                    mode=req.mode,
+                    text_offset=req.text_offset,
+                ),
+            )
+            response = result.to_dict()
     except Exception as e:
         log.error(f"[ERROR] Translation failed: {e}")
         log.error(traceback.format_exc())
@@ -84,7 +104,6 @@ async def translate(req: TranslateRequest, user_id: str = Depends(get_current_us
 
     increment_usage(user_id)
 
-    response = result.to_dict()
     response["usage"] = {"used": used + 1, "limit": limit}
     return response
 

@@ -1,7 +1,7 @@
-import { showButton, removeButton, showTooltip, updateTooltip, updateTooltipLogin, updateTooltipLimitReached, removeTooltip, isOwnElement } from "./ui.js";
+import { showButton, removeButton, showTooltip, updateTooltip, updateTooltipLogin, updateTooltipLimitReached, removeTooltip, showHint, isOwnElement } from "./ui.js";
 import { highlightSelection, getCachedTranslation, deleteWord } from "./highlight.js";
 
-const MAX_LENGTH = 500;
+const MAX_WORDS = 8;
 const LETTER_OR_NUM = /\p{L}|\p{N}/u;
 
 // Common abbreviations that don't end sentences (lowercase for matching)
@@ -31,14 +31,7 @@ function isSentenceEnd(text, i) {
   // Ellipsis: "..."
   if ((i >= 1 && text[i - 1] === ".") || (i + 1 < text.length && text[i + 1] === ".")) return false;
 
-  // Decimal number: digit before and digit after the dot (already caught by no-space check above,
-  // but guard against edge cases like "3. ")
-  if (i >= 1 && /\d/.test(text[i - 1])) {
-    // Look ahead past the space — if next non-space is a digit, likely a decimal split by formatting
-    // But "3. The answer" is a valid sentence end (numbered list), so only reject if next word is a digit
-    const afterSpace = text.slice(i + 1).match(/^\s*(\S)/);
-    if (afterSpace && /\d/.test(afterSpace[1])) return false;
-  }
+  if (i >= 1 && /\d/.test(text[i - 1])) return false;
 
   // Abbreviation check: grab the word immediately before the period
   let wordStart = i - 1;
@@ -176,7 +169,10 @@ async function translate(text, context, textOffset, range, x, y) {
 
     if (res.error) {
       if (res.error === "NOT_AUTHENTICATED") {
-        updateTooltipLogin();
+        updateTooltipLogin(() => {
+          translating = false;
+          translate(text, context, textOffset, range, x, y);
+        });
       } else {
         let parsed = null;
         try { parsed = JSON.parse(res.error); } catch {}
@@ -205,7 +201,30 @@ function dismissPopups() {
   removeTooltip();
 }
 
+// ── Enabled state ────────────────────────────────────────────────────────────
+let enabled = true;
+
+function applyEnabledClass() {
+  document.documentElement.classList.toggle("contxtly-disabled", !enabled);
+}
+
+chrome.storage.local.get("settings").then(({ settings }) => {
+  if (settings && typeof settings.enabled === "boolean") enabled = settings.enabled;
+  applyEnabledClass();
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local" || !changes.settings) return;
+  const next = changes.settings.newValue;
+  if (next && typeof next.enabled === "boolean") {
+    enabled = next.enabled;
+    applyEnabledClass();
+    if (!enabled) dismissPopups();
+  }
+});
+
 document.addEventListener("mouseup", (e) => {
+  if (!enabled) return;
   if (isOwnElement(e.target)) return;
 
   const selection = window.getSelection();
@@ -213,7 +232,13 @@ document.addEventListener("mouseup", (e) => {
 
   dismissPopups();
 
-  if (raw.length > 0 && raw.length < MAX_LENGTH) {
+  const wordCount = raw ? raw.split(/\s+/).filter(Boolean).length : 0;
+  if (wordCount > MAX_WORDS) {
+    const rect = selection.getRangeAt(0).getBoundingClientRect();
+    showHint(rect.left + rect.width / 2, rect.bottom, `Select up to ${MAX_WORDS} words`);
+    return;
+  }
+  if (raw.length > 0) {
     const extracted = extractSentence(selection);
     const context = extracted?.sentence || null;
     const textOffset = extracted?.textOffset ?? null;

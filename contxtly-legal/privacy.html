@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Contxtly</title>
+  <link rel="icon" type="image/svg+xml" href="/contxtly.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+  <link rel="alternate icon" href="/favicon.ico" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      line-height: 1.7;
+    }
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    header .logo { width: 32px; height: 32px; }
+    header h1 { font-size: 16px; font-weight: 700; color: #0f172a; }
+    header nav { margin-left: auto; display: flex; gap: 18px; }
+    header nav a { font-size: 13px; color: #475569; text-decoration: none; font-weight: 500; }
+    header nav a:hover { color: #4f46e5; }
+    main {
+      max-width: 720px;
+      margin: 48px auto;
+      padding: 0 24px 80px;
+    }
+    h2 { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+    .updated { font-size: 13px; color: #64748b; margin-bottom: 36px; }
+    h3 { font-size: 16px; font-weight: 700; margin: 28px 0 8px; color: #1e293b; }
+    p  { font-size: 14px; color: #475569; margin-bottom: 10px; }
+    ul { padding-left: 20px; margin-bottom: 10px; }
+    ul li { font-size: 14px; color: #475569; margin-bottom: 4px; }
+    a  { color: #4f46e5; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .section { border-top: 1px solid #f1f5f9; padding-top: 28px; margin-top: 28px; }
+    .section:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+    footer { text-align: center; padding: 32px 24px; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; background: #fff; }
+    footer a { color: #64748b; margin: 0 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html" style="display:flex; align-items:center; gap:10px; text-decoration:none;">
+      <img class="logo" src="contxtly.svg" alt="Contxtly" />
+      <h1>Contxtly</h1>
+    </a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Privacy Policy</h2>
+    <p class="updated">Last updated: April 23, 2026</p>
+
+    <div class="section">
+      <h3>1. Overview</h3>
+      <p>
+        Contxtly ("we", "us", "our") is a browser extension that helps you learn languages by translating
+        words in context on any webpage. This Privacy Policy explains what data we collect, how we use it,
+        and your rights over that data.
+      </p>
+    </div>
+
+    <div class="section">
+      <h3>2. Data We Collect</h3>
+      <p>When you use Contxtly, we store the following in our database:</p>
+      <ul>
+        <li><strong>Profile</strong> — your email address (obtained via Google Sign-In through Supabase), your plan, your daily translation limit, your account creation date, and, if you subscribe, a Stripe customer ID.</li>
+        <li><strong>Saved words</strong> — for each word you choose to save: the word text, its translation, the surrounding sentence (context), the URL of the page where you saved it, the character offset of the word within the sentence, additional translation metadata (e.g. grammatical breakdown) returned by our pipeline, and timestamps for creation and deletion.</li>
+        <li><strong>Usage counters</strong> — per-day translation counts tied to your account, used to enforce plan limits.</li>
+      </ul>
+      <p>
+        When you request a translation, the word you selected and its surrounding sentence are sent to our backend and
+        to Groq (our AI provider) so the translation can be generated. Translation results are cached temporarily in Redis
+        (up to 24 hours) to speed up repeat requests; the cache is not tied to your account.
+      </p>
+      <p>
+        We do <strong>not</strong> store your name, profile picture, payment card details, browsing history, the full text of
+        pages you visit, keystrokes, or any data beyond what is listed above. Stripe handles all payment information directly;
+        we only receive your subscription status and a customer ID.
+      </p>
+    </div>
+
+    <div class="section">
+      <h3>3. How We Use Your Data</h3>
+      <ul>
+        <li>To authenticate you and maintain your account.</li>
+        <li>To translate selected text using our AI-powered pipeline.</li>
+        <li>To sync your saved words across devices.</li>
+        <li>To enforce daily translation limits based on your plan.</li>
+        <li>To process subscription payments via Stripe.</li>
+        <li>To cache translations temporarily in Redis so the same request is faster and cheaper to serve.</li>
+      </ul>
+      <p>We do not sell, rent, or share your personal data with third parties for advertising purposes.</p>
+    </div>
+
+    <div class="section">
+      <h3>4. Third-Party Services</h3>
+      <p>Contxtly relies on the following providers to deliver its functionality:</p>
+      <ul>
+        <li><strong>Supabase</strong> — authentication and database hosting. <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Privacy Policy</a></li>
+        <li><strong>Groq</strong> — AI inference. Text you select to translate, and its surrounding sentence, is sent to Groq for processing. <a href="https://groq.com/privacy-policy/" target="_blank" rel="noopener">Privacy Policy</a></li>
+        <li><strong>Stripe</strong> — payment processing and subscription management. <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Privacy Policy</a></li>
+        <li><strong>Google</strong> — sign-in provider. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy Policy</a></li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h3>5. Data Storage and Security</h3>
+      <p>
+        Your account data and saved vocabulary are stored in Supabase (PostgreSQL) with row-level security
+        policies that ensure you can only access your own records. All traffic between the extension and our
+        backend is transmitted over HTTPS, and authentication tokens are verified server-side on every request.
+      </p>
+    </div>
+
+    <div class="section">
+      <h3>6. Data Retention and Deletion</h3>
+      <p>
+        You can delete individual saved words at any time from within the extension. To delete your account
+        and all associated data, contact us at
+        <a href="mailto:pro.imadallal@gmail.com">pro.imadallal@gmail.com</a>.
+        We will process deletion requests within 30 days. Cached translations are automatically expired
+        from Redis within 24 hours and are not tied to your account.
+      </p>
+    </div>
+
+    <div class="section">
+      <h3>7. Your Rights</h3>
+      <p>
+        Depending on your jurisdiction, you may have the right to access, correct, export, or delete the
+        personal data we hold about you. To exercise any of these rights, email us at
+        <a href="mailto:pro.imadallal@gmail.com">pro.imadallal@gmail.com</a>.
+      </p>
+    </div>
+
+    <div class="section">
+      <h3>8. Children's Privacy</h3>
+      <p>
+        Contxtly is not directed at children under 13, and we do not knowingly collect personal data from them.
+        If you believe a child has provided us with personal data, please contact us and we will delete it.
+      </p>
+    </div>
+
+    <div class="section">
+      <h3>9. Changes to This Policy</h3>
+      <p>
+        We may update this policy from time to time. Significant changes will be reflected by updating the
+        "Last updated" date above. Continued use of Contxtly after a change constitutes acceptance of the
+        updated policy.
+      </p>
+    </div>
+
+    <div class="section">
+      <h3>10. Contact</h3>
+      <p>
+        If you have questions about this policy or our handling of your data, email us at
+        <a href="mailto:pro.imadallal@gmail.com">pro.imadallal@gmail.com</a>.
+      </p>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 Contxtly · <a href="index.html">Home</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a>
+  </footer>
+</body>
+</html>

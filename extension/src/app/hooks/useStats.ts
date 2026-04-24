@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { Word, TranslationData } from "../types";
 import type { WordTypeColorKey } from "../theme";
 
-const WORD_TYPE_MAP: Record<string, WordTypeColorKey> = {
+const WORD_TYPE_MAP: Record<string, Exclude<WordTypeColorKey, "verb_modal" | "verb_compound">> = {
   conjugated_verb: "verb", separable_prefix: "verb", verb: "verb",
   noun: "noun", plural_noun: "noun",
   adjective: "adjective",
@@ -11,7 +11,9 @@ const WORD_TYPE_MAP: Record<string, WordTypeColorKey> = {
   compound: "compound",
 };
 
-function typeOf(w: Word): WordTypeColorKey | "other" {
+type StatKey = Exclude<WordTypeColorKey, "verb_modal" | "verb_compound"> | "other";
+
+function typeOf(w: Word): StatKey {
   const t = typeof w.translation === "object" ? (w.translation as TranslationData) : null;
   if (!t) return "other";
   if (t.word_type && WORD_TYPE_MAP[t.word_type]) return WORD_TYPE_MAP[t.word_type];
@@ -27,7 +29,7 @@ function dayKey(ts: number): string {
 export interface Stats {
   total: number;
   streak: number;
-  byType: Record<WordTypeColorKey | "other", number>;
+  byType: Record<Exclude<WordTypeColorKey, "verb_modal" | "verb_compound"> | "other", number>;
   last14: { day: string; count: number; label: string }[];
 }
 

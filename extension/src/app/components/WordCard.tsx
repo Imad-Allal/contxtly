@@ -22,6 +22,8 @@ const WORD_TYPE_MAP: Record<string, WordTypeColorKey> = {
 
 function wordTypeKey(t: TranslationData | null): WordTypeColorKey | null {
   if (!t) return null;
+  if (t.verb_variant === "modal") return "verb_modal";
+  if (t.verb_variant === "compound") return "verb_compound";
   if (t.word_type && WORD_TYPE_MAP[t.word_type]) return WORD_TYPE_MAP[t.word_type];
   if (t.collocation_pattern) return "collocation";
   return null;
@@ -147,7 +149,7 @@ function PronounceButton({ text, lang }: { text: string; lang?: string }) {
       whileTap={{ scale: 0.92 }}
       onClick={speak}
       aria-label={`Pronounce ${text}`}
-      className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors"
+      className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
     >
       <motion.div animate={speaking ? { scale: [1, 1.2, 1] } : {}} transition={{ duration: 0.6, repeat: speaking ? Infinity : 0 }}>
         <Volume2 size={12} />
@@ -203,6 +205,7 @@ export function WordCard({
 
   return (
     <motion.div
+      data-word-key={key}
       initial={{ opacity: 0, y: reduced ? 0 : 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, ...MOTION.base }}
@@ -248,7 +251,7 @@ export function WordCard({
               <button
                 onClick={(e) => { e.stopPropagation(); if (sourceUrl) onOpenUrl(sourceUrl); }}
                 aria-label={`Open source: ${sourceHost}`}
-                className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-[1px] text-[10px] font-medium text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors max-w-[110px]"
+                className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-[1px] text-[10px] font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors max-w-[110px]"
               >
                 <Globe size={9} />
                 <span className="truncate">{sourceHost}</span>

@@ -120,8 +120,9 @@ async function resolveAnkiModel() {
 
 // ── Export handler ────────────────────────────────────────────────────────────
 
-export async function handleExportToAnki() {
+export async function handleExportToAnki(lemmas) {
   const { words: stored = [] } = await chrome.storage.local.get(["words"]);
+  const filter = lemmas?.length ? new Set(lemmas) : null;
 
   const seen = new Set();
   const words = stored
@@ -129,6 +130,7 @@ export async function handleExportToAnki() {
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
     .filter((h) => {
       const key = h.lemma || h.text;
+      if (filter && !filter.has(key)) return false;
       return !seen.has(key) && seen.add(key);
     });
 

@@ -3,22 +3,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowLeft, ArrowRight } from "lucide-react";
 import { Step1Welcome } from "./steps/Step1Welcome";
 import { Step2Highlight } from "./steps/Step2Highlight";
+import { Step3Save } from "./steps/Step3Save";
 import { Step4Review } from "./steps/Step4Review";
 import { PRIMARY_GRADIENT, RADIUS, MOTION } from "../../theme";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
-const STEPS = [Step1Welcome, Step2Highlight, Step4Review];
+const STEP_COUNT = 4;
 
 interface Props {
   onFinish: () => void;
+  targetLang: string;
+  onLangChange: (lang: string) => void;
 }
 
-export function OnboardingOverlay({ onFinish }: Props) {
+export function OnboardingOverlay({ onFinish, targetLang, onLangChange }: Props) {
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState<1 | -1>(1);
   const reduced = useReducedMotion();
-  const Current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
+  const isLast = step === STEP_COUNT - 1;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -33,7 +35,7 @@ export function OnboardingOverlay({ onFinish }: Props) {
   function next() {
     if (isLast) return onFinish();
     setDir(1);
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep((s) => Math.min(s + 1, STEP_COUNT - 1));
   }
 
   function prev() {
@@ -89,9 +91,14 @@ export function OnboardingOverlay({ onFinish }: Props) {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -dir * slideOffset, opacity: 0 }}
               transition={MOTION.base}
-              className="absolute inset-0 px-6 pt-10 pb-4 flex flex-col items-center text-center"
+              className="absolute inset-0 px-6 py-6 flex flex-col items-center justify-center text-center"
             >
-              <Current />
+              {step === 0 && <Step1Welcome />}
+              {step === 1 && <Step2Highlight />}
+              {step === 2 && <Step3Save />}
+              {step === 3 && (
+                <Step4Review targetLang={targetLang} onLangChange={onLangChange} />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -107,13 +114,13 @@ export function OnboardingOverlay({ onFinish }: Props) {
             Back
           </button>
 
-          <div className="flex items-center gap-1.5" role="progressbar" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={STEPS.length}>
-            {STEPS.map((_, i) => (
+          <div className="flex items-center gap-1.5" role="progressbar" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={STEP_COUNT}>
+            {Array.from({ length: STEP_COUNT }).map((_, i) => (
               <motion.div
                 key={i}
                 animate={{
                   width: i === step ? 18 : 6,
-                  backgroundColor: i === step ? "#6366f1" : "#cbd5e1",
+                  backgroundColor: i === step ? "#bb0051" : "#cbd5e1",
                 }}
                 transition={MOTION.base}
                 className="h-1.5 rounded-full"
@@ -126,7 +133,7 @@ export function OnboardingOverlay({ onFinish }: Props) {
             whileTap={{ scale: 0.96 }}
             onClick={next}
             className="flex items-center gap-1 px-4 py-1.5 rounded-xl text-[12px] font-bold text-white shadow-md"
-            style={{ background: PRIMARY_GRADIENT, boxShadow: "0 4px 12px rgba(99,102,241,0.3)" }}
+            style={{ background: PRIMARY_GRADIENT, boxShadow: "0 4px 12px rgba(187,0,81,0.3)" }}
           >
             {isLast ? "Start learning" : "Next"}
             {!isLast && <ArrowRight size={12} />}

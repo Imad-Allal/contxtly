@@ -64,7 +64,6 @@ function getContextAndOffset(range, text) {
     const offset = preRange.toString().length;
     const full = block.textContent;
     const context = full.slice(Math.max(0, offset - 150), Math.min(full.length, offset + text.length + 150));
-    console.log(`[contxtly] saved "${text}": offset=${offset}, block tag=${block.tagName}, block len=${full.length}`);
     return { context, offset };
   } catch {
     return { context: "", offset: null };
@@ -261,14 +260,12 @@ function restoreHighlightToDOM(text, translation, context, offset) {
   if (block) {
     const restored = restoreByOffset(block, text, translation, offset);
     if (restored) {
-      console.log(`[contxtly] restored "${text}" via offset`);
       const ctxSentence = translation?.context_translation?.source || "";
       for (const word of translation?.related_words || []) {
         highlightRelatedWord(block, word, translation, ctxSentence);
       }
       return;
     }
-    console.log(`[contxtly] offset mismatch for "${text}", falling back to context`);
   }
 
   // Context fallback
@@ -289,7 +286,6 @@ function restoreHighlightToDOM(text, translation, context, offset) {
       range.setStart(node, idx);
       range.setEnd(node, idx + text.length);
       range.surroundContents(createMark(translation, text));
-      console.log(`[contxtly] restored "${text}" via context`);
       if (block) {
         const ctxSentence = translation?.context_translation?.source || "";
         for (const word of translation?.related_words || []) {
@@ -327,7 +323,6 @@ function restoreByOffset(block, text, translation, offset) {
         // Already highlighted — check if the mark covers exactly the right text at this offset
         const mark = node.parentElement.closest(`.${CLASS}`);
         if (mark && mark.textContent === text) {
-          console.log(`[contxtly] "${text}" already highlighted at offset ${offset}, skipping re-wrap`);
           return true;
         }
         charCount += nodeLen;
@@ -364,7 +359,6 @@ async function restore() {
       try { data = JSON.parse(data); } catch {}
       const markLemma = data?.lemma || mark.textContent;
       if (markLemma === (h.lemma || h.text) || mark.textContent === h.text) {
-        console.log(`[contxtly] "${h.text}" already in DOM, skipping restore`);
         h.done = true;
         break;
       }
@@ -391,11 +385,9 @@ async function restore() {
       // Offset-first — find the exact block the offset belongs to, independent of current walker node
       if (h.offset != null) {
         const offsetBlock = findBlockByOffset(h.text, h.offset);
-        console.log(`[contxtly] offset restore "${h.text}": offset=${h.offset}, block found=${!!offsetBlock}, block tag=${offsetBlock?.tagName}, block text preview="${offsetBlock?.textContent?.slice(0, 60)}"`);
         if (offsetBlock) {
           const restored = restoreByOffset(offsetBlock, h.text, h.translation, h.offset);
           if (restored) {
-            console.log(`[contxtly] restored "${h.text}" via offset`);
             h.done = true;
             const ctxSentence = h.translation?.context_translation?.source || "";
             for (const word of h.translation?.related_words || []) {
@@ -403,9 +395,7 @@ async function restore() {
             }
             continue;
           }
-          console.log(`[contxtly] restoreByOffset failed for "${h.text}" at offset=${h.offset} in block "${offsetBlock?.textContent?.slice(0, 60)}"`);
         }
-        console.log(`[contxtly] offset mismatch for "${h.text}", falling back to context`);
       }
 
       // Context fallback
@@ -417,7 +407,6 @@ async function restore() {
         range.setStart(node, idx);
         range.setEnd(node, idx + h.text.length);
         range.surroundContents(createMark(h.translation, h.text));
-        console.log(`[contxtly] restored "${h.text}" via context`);
         h.done = true;
         if (block) {
           const ctxSentence = h.translation?.context_translation?.source || "";

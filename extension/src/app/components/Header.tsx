@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Settings, LogIn, LogOut, Zap, List, Repeat, BarChart3 } from "lucide-react";
+import { Settings, LogIn, LogOut, Zap, List, Repeat, BarChart3, Power, PowerOff } from "lucide-react";
 import { openUrl, getCheckoutUrl } from "../chrome-api";
 import type { AuthState } from "../hooks/useAuth";
 import { RADIUS, MOTION } from "../theme";
@@ -10,6 +10,8 @@ export type AppTab = "list" | "review" | "stats";
 interface HeaderProps {
   settingsOpen: boolean;
   onToggleSettings: () => void;
+  enabled: boolean;
+  onEnabledChange: (v: boolean) => void;
   auth: AuthState;
   onLogin: () => void;
   onLogout: () => void;
@@ -23,7 +25,7 @@ const TABS: { value: AppTab; label: string; icon: typeof List }[] = [
   { value: "stats", label: "Stats", icon: BarChart3 },
 ];
 
-export function Header({ settingsOpen, onToggleSettings, auth, onLogin, onLogout, tab, onTabChange }: HeaderProps) {
+export function Header({ settingsOpen, onToggleSettings, enabled, onEnabledChange, auth, onLogin, onLogout, tab, onTabChange }: HeaderProps) {
   const { loggedIn, usage } = auth;
   const nearLimit = usage && usage.used >= usage.limit * 0.8;
   const atLimit = usage && usage.used >= usage.limit;
@@ -57,6 +59,24 @@ export function Header({ settingsOpen, onToggleSettings, auth, onLogin, onLogout
           <motion.button
             whileHover={{ scale: 1.07 }}
             whileTap={{ scale: 0.93 }}
+            onClick={() => onEnabledChange(!enabled)}
+            aria-label={enabled ? "Pause extension" : "Resume extension"}
+            aria-pressed={enabled}
+            className="w-8 h-8 flex items-center justify-center transition-all"
+            style={{
+              borderRadius: RADIUS.md,
+              background: "rgba(255,255,255,0.75)",
+              color: enabled ? "#bb0051" : "#94a3b8",
+              border: "1px solid rgba(255,255,255,0.9)",
+            }}
+            title={enabled ? "Pause extension" : "Resume extension"}
+          >
+            {enabled ? <Power size={15} strokeWidth={2.4} /> : <PowerOff size={15} strokeWidth={2.4} />}
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.07 }}
+            whileTap={{ scale: 0.93 }}
             onClick={loggedIn ? onLogout : onLogin}
             aria-label={loggedIn ? "Log out" : "Log in with Google"}
             className="w-8 h-8 flex items-center justify-center transition-all"
@@ -81,7 +101,7 @@ export function Header({ settingsOpen, onToggleSettings, auth, onLogin, onLogout
             style={{
               borderRadius: RADIUS.md,
               ...(settingsOpen
-                ? { background: "#4f46e5", color: "white", boxShadow: "0 2px 8px rgba(79,70,229,0.25)" }
+                ? { background: "#bb0051", color: "white", boxShadow: "0 2px 8px rgba(187,0,81,0.3)" }
                 : { background: "rgba(255,255,255,0.75)", color: "#64748b", border: "1px solid rgba(255,255,255,0.9)" }),
             }}
           >
@@ -145,7 +165,7 @@ export function Header({ settingsOpen, onToggleSettings, auth, onLogin, onLogout
               <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ background: atLimit ? "#ef4444" : nearLimit ? "#f59e0b" : "#6366f1" }}
+                  style={{ background: atLimit ? "#ef4444" : nearLimit ? "#f59e0b" : "#bb0051" }}
                   initial={{ width: 0 }}
                   animate={{ width: usage ? `${Math.min((usage.used / usage.limit) * 100, 100)}%` : "0%" }}
                   transition={{ duration: 0.4, ease: "easeOut" }}
@@ -162,7 +182,7 @@ export function Header({ settingsOpen, onToggleSettings, auth, onLogin, onLogout
                 whileTap={{ scale: 0.95 }}
                 onClick={handleUpgrade}
                 className="ml-2 flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold text-white"
-                style={{ background: "linear-gradient(135deg, #f59e0b, #f97316)" }}
+                style={{ background: "linear-gradient(135deg, #9d0044, #bb0051)" }}
               >
                 <Zap size={10} />
                 Upgrade
