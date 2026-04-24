@@ -4,6 +4,7 @@ const STORAGE_KEY = "onboarded";
 
 export function useOnboarding(loggedIn: boolean) {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  const [showLangNotice, setShowLangNotice] = useState(false);
 
   useEffect(() => {
     if (!loggedIn) {
@@ -18,7 +19,10 @@ export function useOnboarding(loggedIn: boolean) {
   const finish = useCallback(async () => {
     await chrome.storage.local.set({ [STORAGE_KEY]: true });
     setOnboarded(true);
+    setShowLangNotice(true);
   }, []);
+
+  const dismissLangNotice = useCallback(() => setShowLangNotice(false), []);
 
   const replay = useCallback(async () => {
     await chrome.storage.local.set({ [STORAGE_KEY]: false });
@@ -27,5 +31,5 @@ export function useOnboarding(loggedIn: boolean) {
 
   const showOverlay = loggedIn && onboarded === false;
 
-  return { showOverlay, finish, replay };
+  return { showOverlay, finish, replay, showLangNotice, dismissLangNotice };
 }

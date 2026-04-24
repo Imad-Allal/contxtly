@@ -23,6 +23,7 @@ import { WordCard } from "./components/WordCard";
 import { EmptyState } from "./components/EmptyState";
 import { Footer } from "./components/Footer";
 import { OnboardingOverlay } from "./components/onboarding/OnboardingOverlay";
+import { LanguageNotice } from "./components/LanguageNotice";
 import { ShortcutsOverlay } from "./components/ShortcutsOverlay";
 import { WordOfDay } from "./components/WordOfDay";
 import { StatsPanel } from "./components/StatsPanel";
@@ -465,6 +466,9 @@ export default function App() {
           )}
           {showShortcuts && !onboarding.showOverlay && (
             <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />
+          )}
+          {onboarding.showLangNotice && !onboarding.showOverlay && (
+            <LanguageNotice onDismiss={onboarding.dismissLangNotice} />
           )}
         </AnimatePresence>
       </div>

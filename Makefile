@@ -1,4 +1,4 @@
-.PHONY: dev prod down stop start logs shell stripe ext-dev ext-build
+.PHONY: dev prod down stop start logs shell stripe ext-dev ext-build ext-zip screenshots
 
 dev:
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
@@ -29,3 +29,9 @@ ext-dev:
 
 ext-build:
 	cd extension && npm run build
+
+ext-zip:
+	./extension/package.zip.sh
+
+screenshots:
+	cd screenshots && npm run dev

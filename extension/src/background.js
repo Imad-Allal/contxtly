@@ -315,6 +315,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       chrome.tabs.create({ url: request.data?.url });
       return Promise.resolve({ success: true });
     },
+    openPopup: async () => {
+      try {
+        await chrome.action.openPopup();
+        return { success: true };
+      } catch (e) {
+        return { success: false, error: e?.message || "openPopup failed" };
+      }
+    },
   };
 
   const handler = handlers[request.action];

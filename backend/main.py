@@ -7,7 +7,6 @@ from functools import partial
 import stripe
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from analyzer import preload_models
@@ -43,7 +42,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 class TranslateRequest(BaseModel):

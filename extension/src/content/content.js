@@ -169,9 +169,22 @@ async function translate(text, context, textOffset, range, x, y) {
 
     if (res.error) {
       if (res.error === "NOT_AUTHENTICATED") {
-        updateTooltipLogin(() => {
-          translating = false;
-          translate(text, context, textOffset, range, x, y);
+        updateTooltipLogin(async () => {
+          const { onboarded } = await chrome.storage.local.get("onboarded");
+          if (onboarded) {
+            translating = false;
+            translate(text, context, textOffset, range, x, y);
+            return;
+          }
+          chrome.runtime.sendMessage({ action: "openPopup" }).catch(() => {});
+          removeTooltip();
+          const listener = (changes, area) => {
+            if (area !== "local" || changes.onboarded?.newValue !== true) return;
+            chrome.storage.onChanged.removeListener(listener);
+            translating = false;
+            translate(text, context, textOffset, range, x, y);
+          };
+          chrome.storage.onChanged.addListener(listener);
         });
       } else {
         let parsed = null;

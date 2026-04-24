@@ -81,7 +81,7 @@ export function Scene1Hero() {
   const t = COLORS.collocation;
   return (
     <Scene
-      title="Translate any word, in context."
+      title="Translate any word, in context, for free."
       subtitle="Contxtly reads the surrounding sentence — it even catches collocations whose parts are separated by other words."
     >
       <div style={{ position: "relative" }}>
