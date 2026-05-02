@@ -7,7 +7,7 @@
   Highlight any word on any page — get the meaning that fits the sentence.
 
   [![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Under%20Review-orange?logo=googlechrome&logoColor=white)](#status)
-  [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+  [![License](https://img.shields.io/badge/license-AGPL%20v3-blue.svg)](LICENSE)
 
 </div>
 
