@@ -39,15 +39,16 @@ Highlight any word or phrase on any webpage, and Contxtly instantly gives you a 
 3. Review later in the extension's Review tab with spaced-repetition style recall.
 4. Export to Anki with one click (optional).
 
-<div align="center">
-  <img src="assets/screenshots/01-highlight.png" alt="Translate any word in context" width="420" />
-  &nbsp;
-  <img src="assets/screenshots/02-translation.png" alt="Build your vocabulary as you read" width="420" />
-  <br/><br/>
-  <img src="assets/screenshots/03-library.png" alt="Every word at your fingertips" width="420" />
-  &nbsp;
-  <img src="assets/screenshots/04-review.png" alt="Review with spaced repetition" width="420" />
-</div>
+<table align="center">
+  <tr>
+    <td><img src="assets/screenshots/01-highlight.png" alt="Translate any word in context" /></td>
+    <td><img src="assets/screenshots/02-translation.png" alt="Build your vocabulary as you read" /></td>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/03-library.png" alt="Every word at your fingertips" /></td>
+    <td><img src="assets/screenshots/04-review.png" alt="Review with spaced repetition" /></td>
+  </tr>
+</table>
 
 ## Features
 
