@@ -1,0 +1,12 @@
+{
+  "phenomenon": "separable_verb",
+  "comment": "Separable verbs from both verb stem and prefix selection.",
+  "cases": [
+    { "sentence": "Sie ruft mich morgen an.",          "target": "an",     "expect": { "detected": true, "word_type_contains": "separable" } },
+    { "sentence": "Er legte das Buch nieder.",         "target": "nieder", "expect": { "detected": true, "word_type_contains": "separable" } },
+    { "sentence": "Ich ziehe mich an.",                "target": "an",     "expect": { "detected": true, "word_type_contains": "separable" } },
+    { "sentence": "Sie ruft mich morgen an.",          "target": "ruft",   "expect": { "detected": true } },
+    { "sentence": "Wir wachen früh auf.",              "target": "auf",    "expect": { "detected": true, "word_type_contains": "separable" } },
+    { "sentence": "Er kauft das Auto.",                "target": "kauft",  "expect": { "detected": false } }
+  ]
+}

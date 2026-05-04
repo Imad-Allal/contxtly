@@ -185,7 +185,27 @@ or re-attribute imports later. Re-runs are idempotent (upserts).
   *ging* and *gehen* are separate rows. For lemma-level frequency,
   take `max(count)` across the lemma's surface forms at query time.
 
-### 7. Kaikki/Wiktionary — verb forms + noun gender/plural
+### 7. Curated modal particles (Modalpartikeln)
+
+- **Source**: hand-curated from canonical linguistic references
+  (Helbig & Buscha, Thurmair, Weydt, Hentschel & Weydt). ~24 particles
+  × per-sentence-type readings = ~45 rows.
+- **Why curated**: external sources (Wiktionary, DWDS) lump particle
+  types together and don't structure readings by sentence type. The
+  pragmatic glosses are stable across literature and well-documented.
+- **Run** (apply migration `014_german_modal_particle.sql` first):
+  ```bash
+  cd backend
+  python -m scripts.seed_modal_particles
+  ```
+- **Result**: rows in `german_modal_particle(particle, sentence_type,
+  reading)`. Loaded into `dict_store.MODAL_PARTICLES` at startup; v2
+  detector reads from there.
+- **Future expansion**: a Kaikki-particle mining script could surface
+  more candidates (focus particles, regional variants) for admin
+  review.
+
+### 8. Kaikki/Wiktionary — verb forms + noun gender/plural
 
 - **URL / License**: same as the other Kaikki sections.
 - **Run** (apply migration `013_german_morphology.sql` first):

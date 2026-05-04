@@ -1,0 +1,12 @@
+{
+  "phenomenon": "compound_tense",
+  "comment": "German compound tenses (Perfekt, Plusquamperfekt, Futur).",
+  "cases": [
+    { "sentence": "Er hat einen Apfel gegessen.",   "target": "gegessen",  "expect": { "detected": true } },
+    { "sentence": "Wir sind nach Hause gegangen.",  "target": "gegangen",  "expect": { "detected": true } },
+    { "sentence": "Sie hatten das Buch gelesen.",   "target": "gelesen",   "expect": { "detected": true } },
+    { "sentence": "Ich werde morgen lernen.",       "target": "lernen",    "expect": { "detected": true } },
+    { "sentence": "Er liest ein Buch.",             "target": "liest",     "expect": { "detected": false } },
+    { "sentence": "Sie geht nach Hause.",           "target": "geht",      "expect": { "detected": false } }
+  ]
+}

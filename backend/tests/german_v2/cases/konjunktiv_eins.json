@@ -1,0 +1,11 @@
+{
+  "phenomenon": "konjunktiv_eins",
+  "comment": "Konjunktiv I (indirekte Rede) verb forms.",
+  "cases": [
+    { "sentence": "Er sagt, sie habe den Brief geschrieben.",         "target": "habe", "expect": { "detected": true } },
+    { "sentence": "Der Minister erklärte, das Gesetz sei wichtig.",   "target": "sei",  "expect": { "detected": true } },
+    { "sentence": "Sie habe heute Geburtstag, sagte er.",             "target": "habe", "expect": { "detected": true } },
+    { "sentence": "Sie hat den Brief geschrieben.",                   "target": "hat",  "expect": { "detected": false } },
+    { "sentence": "Er liest ein Buch.",                               "target": "liest","expect": { "detected": false } }
+  ]
+}

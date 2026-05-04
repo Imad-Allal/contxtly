@@ -1,0 +1,17 @@
+{
+  "phenomenon": "fixed_expression",
+  "comment": "Fixed expressions and NVVs (both produce word_type='fixed_expression').",
+  "cases": [
+    { "sentence": "Auf jeden Fall komme ich.",         "target": "jeden",   "expect": { "detected": true, "canonical_contains": "auf jeden Fall" } },
+    { "sentence": "Im Allgemeinen funktioniert das.",  "target": "Allgemeinen", "expect": { "detected": true } },
+    { "sentence": "Das ist im Großen und Ganzen gut.", "target": "Großen",  "expect": { "detected": true } },
+    { "sentence": "Wir ziehen das in Betracht.",       "target": "Betracht","expect": { "detected": true, "canonical_contains": "in Betracht ziehen" } },
+    { "sentence": "Sie stellt eine Frage.",            "target": "Frage",   "expect": { "detected": true, "canonical_contains": "Frage stellen" } },
+    { "sentence": "Sie stellt viele Fragen.",          "target": "Fragen",  "expect": { "detected": true, "canonical_contains": "Frage stellen" } },
+    { "sentence": "Er hat eine Entscheidung getroffen.","target": "Entscheidung","expect": { "detected": true, "canonical_contains": "Entscheidung treffen" } },
+    { "sentence": "Wir nehmen das in Anspruch.",       "target": "Anspruch","expect": { "detected": true, "canonical_contains": "in Anspruch nehmen" } },
+    { "sentence": "Sie nahm Abschied von ihm.",        "target": "Abschied","expect": { "detected": true, "canonical_contains": "Abschied nehmen" } },
+    { "sentence": "Er liest ein Buch.",                "target": "Buch",    "expect": { "detected": false } },
+    { "sentence": "Das Auto ist rot.",                 "target": "Auto",    "expect": { "detected": false } }
+  ]
+}
