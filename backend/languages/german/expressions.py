@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import spacy
 from models import TokenRef
-from languages.german.expression_data import EXPRESSION_INDEX
+from languages.german.dict_store import EXPRESSION_INDEX
 
 
 @dataclass
