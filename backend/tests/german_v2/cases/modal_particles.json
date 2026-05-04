@@ -1,0 +1,18 @@
+{
+  "phenomenon": "modal_particle",
+  "comment": "German modal particles (Modalpartikeln).",
+  "cases": [
+    { "sentence": "Komm doch mal her.",                "target": "doch",  "expect": { "detected": true } },
+    { "sentence": "Komm doch mal her.",                "target": "mal",   "expect": { "detected": true } },
+    { "sentence": "Was machst du denn?",               "target": "denn",  "expect": { "detected": true } },
+    { "sentence": "Du bist ja groß!",                  "target": "ja",    "expect": { "detected": true } },
+    { "sentence": "Das ist halt so.",                  "target": "halt",  "expect": { "detected": true } },
+    { "sentence": "Geh ruhig nach Hause.",             "target": "ruhig", "expect": { "detected": true } },
+    { "sentence": "Mach es bloß nicht!",               "target": "bloß",  "expect": { "detected": true } },
+    { "sentence": "Das ist gar nicht wahr.",           "target": "gar",   "expect": { "detected": true } },
+    { "sentence": "Ich gehe eh nach Hause.",           "target": "eh",    "expect": { "detected": true } },
+    { "sentence": "Ich gehe, denn ich bin müde.",      "target": "denn",  "expect": { "detected": false } },
+    { "sentence": "Zwei mal drei sind sechs.",         "target": "mal",   "expect": { "detected": false } },
+    { "sentence": "Aber er kommt trotzdem.",           "target": "aber",  "expect": { "detected": false } }
+  ]
+}

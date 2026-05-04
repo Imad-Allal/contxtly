@@ -1,0 +1,13 @@
+{
+  "phenomenon": "collocation",
+  "comment": "Verb + preposition collocations.",
+  "cases": [
+    { "sentence": "Ich denke an dich.",              "target": "denken",  "expect": { "detected": true, "canonical_contains": "an" } },
+    { "sentence": "Sie wartet auf den Zug.",         "target": "warten",  "expect": { "detected": true, "canonical_contains": "auf" } },
+    { "sentence": "Er glaubt an Gott.",              "target": "glauben", "expect": { "detected": true, "canonical_contains": "an" } },
+    { "sentence": "Wir freuen uns auf das Wochenende.","target": "freuen", "expect": { "detected": true, "canonical_contains": "auf" } },
+    { "sentence": "Sie leidet an einer Krankheit.",  "target": "leiden",  "expect": { "detected": true, "canonical_contains": "an" } },
+    { "sentence": "Er hilft dem Studenten.",         "target": "helfen",  "expect": { "detected": false } },
+    { "sentence": "Sie schläft.",                    "target": "schlafen","expect": { "detected": false } }
+  ]
+}

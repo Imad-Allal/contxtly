@@ -1,0 +1,13 @@
+{
+  "phenomenon": "zu_infinitive",
+  "comment": "zu-Infinitiv constructions including fused VVIZU and introducer + zu + Inf.",
+  "cases": [
+    { "sentence": "Ich versuche, zu gehen.",        "target": "gehen",      "expect": { "detected": true } },
+    { "sentence": "Er ging, um zu lernen.",         "target": "lernen",     "expect": { "detected": true } },
+    { "sentence": "Es ist abzuwarten.",             "target": "abzuwarten", "expect": { "detected": true } },
+    { "sentence": "Sie kam, ohne zu klopfen.",      "target": "klopfen",    "expect": { "detected": true } },
+    { "sentence": "Anstatt zu schlafen, las er.",   "target": "schlafen",   "expect": { "detected": true } },
+    { "sentence": "Ich gehe nach Hause.",           "target": "gehe",       "expect": { "detected": false } },
+    { "sentence": "Er liest ein Buch.",             "target": "liest",      "expect": { "detected": false } }
+  ]
+}

@@ -12,6 +12,9 @@ services:
       - redis
     environment:
       - REDIS_URL=redis://redis:6379
+      - GERMAN_SQLITE_PATH=/app/data/german.sqlite
+    volumes:
+      - ./data:/app/data:ro
 
   redis:
     image: redis:7-alpine

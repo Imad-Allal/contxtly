@@ -1,0 +1,12 @@
+{
+  "phenomenon": "modal_verb",
+  "comment": "Modal verb + infinitive constructions.",
+  "cases": [
+    { "sentence": "Ich will gehen.",              "target": "gehen",      "expect": { "detected": true } },
+    { "sentence": "Er muss arbeiten.",            "target": "arbeiten",   "expect": { "detected": true } },
+    { "sentence": "Sie kann schwimmen.",          "target": "schwimmen",  "expect": { "detected": true } },
+    { "sentence": "Du sollst aufpassen.",         "target": "aufpassen",  "expect": { "detected": true } },
+    { "sentence": "Wir möchten ein Buch lesen.",  "target": "lesen",      "expect": { "detected": true } },
+    { "sentence": "Er liest ein Buch.",           "target": "liest",      "expect": { "detected": false } }
+  ]
+}

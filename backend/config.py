@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str
     stripe_price_id: str
     backend_url: str = "http://localhost:8000"
+    german_v2_enabled: bool = False
 
     class Config:
         env_file = ".env"

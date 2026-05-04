@@ -1,0 +1,14 @@
+{
+  "phenomenon": "n_declination",
+  "comment": "Weak masculine nouns (n-Deklination).",
+  "cases": [
+    { "sentence": "Der Student liest ein Buch.",      "target": "Student",   "expect": { "detected": true } },
+    { "sentence": "Ich habe den Studenten gesehen.",  "target": "Studenten", "expect": { "detected": true } },
+    { "sentence": "Die Studenten arbeiten zusammen.", "target": "Studenten", "expect": { "detected": true } },
+    { "sentence": "Dem Menschen gefällt das.",        "target": "Menschen",  "expect": { "detected": true } },
+    { "sentence": "Der Junge spielt.",                "target": "Junge",     "expect": { "detected": true } },
+    { "sentence": "Das Auto ist schnell.",            "target": "Auto",      "expect": { "detected": false } },
+    { "sentence": "Der Lehrer kommt.",                "target": "Lehrer",    "expect": { "detected": false } },
+    { "sentence": "Die Frau ist da.",                 "target": "Frau",      "expect": { "detected": false } }
+  ]
+}
