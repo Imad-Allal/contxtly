@@ -96,7 +96,7 @@ def _fetch_sqlite(path: Path) -> dict:
     Array/jsonb columns were JSON-encoded into TEXT by the build script;
     decode them back. SQLite booleans (stored as ints) become bools.
     """
-    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    conn = sqlite3.connect(f"file:{path}?mode=ro&immutable=1", uri=True)
     conn.row_factory = sqlite3.Row
 
     def _q(sql: str, json_cols: tuple[str, ...] = ()) -> list[dict]:
