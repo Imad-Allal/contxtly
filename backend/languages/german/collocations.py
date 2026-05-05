@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import spacy
 from models import TokenRef
-from languages.german.collocation_data import VERB_PREPOSITION_COLLOCATIONS
+from languages.german.dict_store import VERB_PREPOSITION_COLLOCATIONS
 from languages.german.verbs import REFLEXIVE_PRONOUNS
 
 

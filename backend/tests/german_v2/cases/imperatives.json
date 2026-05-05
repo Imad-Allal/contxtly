@@ -1,0 +1,12 @@
+{
+  "phenomenon": "imperative",
+  "comment": "German imperative verb forms.",
+  "cases": [
+    { "sentence": "Komm her!",            "target": "Komm", "expect": { "detected": true } },
+    { "sentence": "Geh nach Hause.",      "target": "Geh",  "expect": { "detected": true } },
+    { "sentence": "Mach es jetzt!",       "target": "Mach", "expect": { "detected": true } },
+    { "sentence": "Lass mich in Ruhe!",   "target": "Lass", "expect": { "detected": true } },
+    { "sentence": "Er kommt nach Hause.", "target": "kommt","expect": { "detected": false } },
+    { "sentence": "Sie geht nach Hause.", "target": "geht", "expect": { "detected": false } }
+  ]
+}

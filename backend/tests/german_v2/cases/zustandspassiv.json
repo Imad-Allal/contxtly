@@ -1,0 +1,12 @@
+{
+  "phenomenon": "zustandspassiv",
+  "comment": "sein + Partizip II as state (vs. Perfekt of intransitive sein-verbs).",
+  "cases": [
+    { "sentence": "Die Tür ist geschlossen.",      "target": "geschlossen", "expect": { "detected": true } },
+    { "sentence": "Der Brief ist geschrieben.",    "target": "geschrieben", "expect": { "detected": true } },
+    { "sentence": "Das Buch ist gelesen.",         "target": "gelesen",     "expect": { "detected": true } },
+    { "sentence": "Er ist gegangen.",              "target": "gegangen",    "expect": { "detected": true, "word_type_contains": "conjugated_verb" } },
+    { "sentence": "Wir sind gefahren.",            "target": "gefahren",    "expect": { "detected": true, "word_type_contains": "conjugated_verb" } },
+    { "sentence": "Sie ist gekommen.",             "target": "gekommen",    "expect": { "detected": true, "word_type_contains": "conjugated_verb" } }
+  ]
+}

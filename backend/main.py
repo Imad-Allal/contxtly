@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from analyzer import preload_models
 from auth import get_current_user
+from languages.german import dict_store as german_dict_store
 from config import settings
 from db import get_db, get_usage, increment_usage
 from pipeline import translate_pipeline
@@ -30,6 +31,7 @@ log = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     preload_models()
+    german_dict_store.load()
     yield
 
 

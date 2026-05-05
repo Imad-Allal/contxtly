@@ -1,0 +1,69 @@
+{
+  "particles": [
+    { "particle": "doch", "sentence_type": "declarative",   "reading": "contradiction or insistence ('after all', 'you know')" },
+    { "particle": "doch", "sentence_type": "imperative",    "reading": "softening + insistence ('go on, do it')" },
+    { "particle": "doch", "sentence_type": "interrogative", "reading": "expressing surprise or seeking confirmation" },
+
+    { "particle": "ja",   "sentence_type": "declarative",   "reading": "shared knowledge / obviousness ('as you know')" },
+    { "particle": "ja",   "sentence_type": "imperative",    "reading": "strong warning ('make sure to')" },
+
+    { "particle": "mal",  "sentence_type": "declarative",   "reading": "softening, casual ('just', 'once')" },
+    { "particle": "mal",  "sentence_type": "imperative",    "reading": "softening request ('just', 'go ahead and')" },
+    { "particle": "mal",  "sentence_type": "interrogative", "reading": "casual softening ('by the way')" },
+
+    { "particle": "halt", "sentence_type": "declarative",   "reading": "resignation ('that's just how it is')" },
+    { "particle": "halt", "sentence_type": "imperative",    "reading": "resignation ('just do it')" },
+
+    { "particle": "eben", "sentence_type": "declarative",   "reading": "resignation, agreement ('exactly', 'just so')" },
+    { "particle": "eben", "sentence_type": "imperative",    "reading": "resignation ('just do it')" },
+
+    { "particle": "schon", "sentence_type": "declarative",   "reading": "concession or reassurance ('alright', 'sure')" },
+    { "particle": "schon", "sentence_type": "imperative",    "reading": "encouragement ('go on')" },
+    { "particle": "schon", "sentence_type": "interrogative", "reading": "impatience ('come on already')" },
+
+    { "particle": "denn", "sentence_type": "interrogative", "reading": "expressing interest or curiosity ('then', 'really')" },
+
+    { "particle": "bloß", "sentence_type": "declarative",   "reading": "emphasis with negative ('just don't')" },
+    { "particle": "bloß", "sentence_type": "imperative",    "reading": "strong warning ('do not at all')" },
+    { "particle": "bloß", "sentence_type": "interrogative", "reading": "expressing concern ('whatever for')" },
+
+    { "particle": "wohl", "sentence_type": "declarative",   "reading": "uncertainty / probability ('probably', 'I suppose')" },
+    { "particle": "wohl", "sentence_type": "interrogative", "reading": "rhetorical doubt ('I wonder')" },
+
+    { "particle": "etwa", "sentence_type": "declarative",   "reading": "expressing surprise / disbelief ('surely not')" },
+    { "particle": "etwa", "sentence_type": "interrogative", "reading": "expressing disbelief ('don't tell me')" },
+
+    { "particle": "ruhig", "sentence_type": "declarative", "reading": "encouragement to do safely ('feel free')" },
+    { "particle": "ruhig", "sentence_type": "imperative",  "reading": "encouragement ('go ahead, it's fine')" },
+
+    { "particle": "eigentlich", "sentence_type": "declarative",   "reading": "by the way / actually ('come to think of it')" },
+    { "particle": "eigentlich", "sentence_type": "interrogative", "reading": "by the way / curiosity ('actually, ...')" },
+
+    { "particle": "aber", "sentence_type": "declarative", "reading": "expressing surprise / admiration ('but really')" },
+    { "particle": "aber", "sentence_type": "imperative",  "reading": "expressing reassurance ('come on')" },
+
+    { "particle": "nur", "sentence_type": "declarative",   "reading": "emphasis or concern ('just', 'whatever for')" },
+    { "particle": "nur", "sentence_type": "imperative",    "reading": "encouragement ('just go ahead')" },
+    { "particle": "nur", "sentence_type": "interrogative", "reading": "emphasis on wonder or concern ('on earth')" },
+
+    { "particle": "vielleicht", "sentence_type": "declarative", "reading": "exclamative emphasis ('really', 'you wouldn't believe')" },
+
+    { "particle": "überhaupt", "sentence_type": "declarative",   "reading": "scope / general emphasis ('at all', 'in general')" },
+    { "particle": "überhaupt", "sentence_type": "interrogative", "reading": "scope emphasis ('actually', 'even in the first place')" },
+
+    { "particle": "gar", "sentence_type": "declarative", "reading": "intensifier with negation ('not at all', 'none whatsoever')" },
+
+    { "particle": "eh", "sentence_type": "declarative", "reading": "colloquial 'anyway' / 'in any case' (Austrian/southern)" },
+
+    { "particle": "sowieso", "sentence_type": "declarative", "reading": "'anyway' / 'in any case'" },
+
+    { "particle": "nun", "sentence_type": "declarative", "reading": "concessive / resigned ('well', 'so be it')" },
+
+    { "particle": "immerhin", "sentence_type": "declarative", "reading": "concessive ('at least', 'after all')" },
+
+    { "particle": "gell", "sentence_type": "interrogative", "reading": "tag particle (southern German) ('right?', 'don't you think?')" },
+    { "particle": "gelle", "sentence_type": "interrogative", "reading": "tag particle (southern German variant of 'gell')" },
+
+    { "particle": "fei", "sentence_type": "declarative", "reading": "Bavarian/Franconian emphasis particle ('really', 'I'm telling you')" }
+  ]
+}
