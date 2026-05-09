@@ -368,7 +368,6 @@ export default function App() {
                 mode={settings.mode}
                 onLangChange={settings.handleLangChange}
                 onModeChange={settings.handleModeChange}
-                auth={auth}
               />
 
               <AnimatePresence mode="wait">

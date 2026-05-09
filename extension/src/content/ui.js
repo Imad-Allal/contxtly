@@ -214,16 +214,8 @@ export function updateTooltipLimitReached() {
   tooltip.className = "contxtly-tooltip contxtly-tooltip-limit";
   tooltip.innerHTML = `
     <div class="contxtly-auth-msg">
-      <span>Daily limit reached</span>
-      <button class="contxtly-auth-btn contxtly-upgrade-btn" id="contxtly-upgrade-btn">Upgrade</button>
+      <span>You have reached your daily limit</span>
     </div>`;
-  tooltip.querySelector("#contxtly-upgrade-btn").onclick = (e) => {
-    e.stopPropagation();
-    chrome.runtime.sendMessage({ action: "getCheckoutUrl" }).then((res) => {
-      if (res?.url) chrome.runtime.sendMessage({ action: "openUrl", url: res.url });
-    });
-    removeTooltip();
-  };
 }
 
 export function showTranslationTooltip(x, y, content, onDelete) {

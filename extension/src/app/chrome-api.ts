@@ -99,19 +99,20 @@ export async function getUsage(): Promise<{ used: number; limit: number; plan: s
   return res;
 }
 
-export async function getPortalUrl(): Promise<string | null> {
-  if (!isChromeExt) return null;
-  const res = await chrome.runtime.sendMessage({ action: "getPortalUrl" });
-  if (res?.error) return null;
-  return res?.url || null;
-}
-
-export async function getCheckoutUrl(): Promise<string | null> {
-  if (!isChromeExt) return null;
-  const res = await chrome.runtime.sendMessage({ action: "getCheckoutUrl" });
-  if (res?.error) return null;
-  return res?.url || null;
-}
+// Stripe billing — disabled
+// export async function getPortalUrl(): Promise<string | null> {
+//   if (!isChromeExt) return null;
+//   const res = await chrome.runtime.sendMessage({ action: "getPortalUrl" });
+//   if (res?.error) return null;
+//   return res?.url || null;
+// }
+//
+// export async function getCheckoutUrl(): Promise<string | null> {
+//   if (!isChromeExt) return null;
+//   const res = await chrome.runtime.sendMessage({ action: "getCheckoutUrl" });
+//   if (res?.error) return null;
+//   return res?.url || null;
+// }
 
 // ── Misc ──────────────────────────────────────────────────────────────────────
 

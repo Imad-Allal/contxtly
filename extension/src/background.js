@@ -256,13 +256,14 @@ async function handleGetUsage() {
   return apiFetch("/usage");
 }
 
-async function handleGetCheckoutUrl() {
-  return apiFetch("/checkout");
-}
-
-async function handleGetPortalUrl() {
-  return apiFetch("/portal");
-}
+// Stripe billing — disabled
+// async function handleGetCheckoutUrl() {
+//   return apiFetch("/checkout");
+// }
+//
+// async function handleGetPortalUrl() {
+//   return apiFetch("/portal");
+// }
 
 // ── Event listeners ───────────────────────────────────────────────────────────
 
@@ -296,8 +297,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Usage / billing
     getUsage:           () => handleGetUsage(),
-    getCheckoutUrl:     () => handleGetCheckoutUrl(),
-    getPortalUrl:       () => handleGetPortalUrl(),
+    // getCheckoutUrl:  () => handleGetCheckoutUrl(),
+    // getPortalUrl:    () => handleGetPortalUrl(),
 
     // Auth
     login:              () => login(),

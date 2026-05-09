@@ -1,10 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Crown, Globe, SlidersHorizontal } from "lucide-react";
+import { Globe, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import { LANGUAGES } from "../constants";
-import { getCheckoutUrl, getPortalUrl, openUrl } from "../chrome-api";
-import type { AuthState } from "../hooks/useAuth";
-import { PRIMARY_GRADIENT } from "../theme";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -12,7 +9,6 @@ interface SettingsPanelProps {
   mode: string;
   onLangChange: (lang: string) => void;
   onModeChange: (mode: string) => void;
-  auth: AuthState;
 }
 
 function Row({
@@ -44,19 +40,7 @@ function Row({
   );
 }
 
-export function SettingsPanel({ open, targetLang, mode, onLangChange, onModeChange, auth }: SettingsPanelProps) {
-  const isPro = auth.usage?.plan === "pro";
-
-  async function handleSubscribe() {
-    const url = await getCheckoutUrl();
-    if (url) openUrl(url);
-  }
-
-  async function handleManage() {
-    const url = await getPortalUrl();
-    if (url) openUrl(url);
-  }
-
+export function SettingsPanel({ open, targetLang, mode, onLangChange, onModeChange }: SettingsPanelProps) {
   return (
     <AnimatePresence>
       {open && (
@@ -111,6 +95,7 @@ export function SettingsPanel({ open, targetLang, mode, onLangChange, onModeChan
               </div>
             </Row>
 
+            {/* Upgrade plan — Stripe billing — disabled */}
             {/* {auth.loggedIn && (
               <Row
                 icon={<Crown size={13} className={isPro ? "text-rose-600" : ""} />}

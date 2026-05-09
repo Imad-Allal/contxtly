@@ -3,27 +3,6 @@ import { showTranslationTooltip, removeTooltip, getHighlightTypeClass, applyHigh
 const CLASS = "contxtly-highlight";
 const SKIP = `.${CLASS}, .contxtly-btn, .contxtly-tooltip`;
 
-// ── Translation cache (in-memory read cache, survives page nav via storage) ───
-
-function cacheKey(text, context) {
-  return context ? `${text}|||${context}` : text;
-}
-
-export async function getCachedTranslation(text, context) {
-  const { translation_cache = {} } = await chrome.storage.local.get("translation_cache");
-  return translation_cache[cacheKey(text, context)] || null;
-}
-
-async function saveTranslationCache(text, context, translation) {
-  const { translation_cache = {} } = await chrome.storage.local.get("translation_cache");
-  translation_cache[cacheKey(text, context)] = translation;
-  for (const related of translation?.related_words || []) {
-    const relatedText = related.text || related;
-    if (relatedText) translation_cache[cacheKey(relatedText, context)] = translation;
-  }
-  await chrome.storage.local.set({ translation_cache });
-}
-
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 
 function unwrap(el) {
@@ -52,7 +31,7 @@ function createMark(translation, text) {
   return mark;
 }
 
-function getContextAndOffset(range, text) {
+export function getContextAndOffset(range, text) {
   const el = range.commonAncestorContainer;
   const block = (el.nodeType === Node.TEXT_NODE ? el.parentElement : el)?.closest("p, div, li, td, article, section");
   if (!block) return { context: "", offset: null };
@@ -182,7 +161,6 @@ export async function highlightSelection(range, text, translation) {
 
   applyHighlightToDOM(range, text, translation);
   const { context, offset } = getContextAndOffset(range, text);
-  await saveTranslationCache(text, context, translation);
   const lemma = translation?.lemma || text;
 
   // Compute offsets for all cluster members so each part can be precisely restored
@@ -345,7 +323,7 @@ function restoreByOffset(block, text, translation, offset) {
 
 // ── Page restore (on load) ────────────────────────────────────────────────────
 
-async function restore() {
+export async function restore() {
   const { words = [] } = await chrome.storage.local.get("words");
   if (!words.length) return;
 
@@ -443,4 +421,3 @@ document.addEventListener("click", (e) => {
   }
 });
 
-restore();

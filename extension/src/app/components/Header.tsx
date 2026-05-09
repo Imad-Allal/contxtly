@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
-import { Settings, LogIn, LogOut, Zap, List, Repeat, BarChart3, Power, PowerOff } from "lucide-react";
-import { openUrl, getCheckoutUrl } from "../chrome-api";
+import { Settings, LogIn, LogOut, List, Repeat, BarChart3, Power, PowerOff } from "lucide-react";
 import type { AuthState } from "../hooks/useAuth";
 import { RADIUS, MOTION } from "../theme";
 import logoUrl from "../assets/contxtly.svg";
@@ -27,13 +26,7 @@ const TABS: { value: AppTab; label: string; icon: typeof List }[] = [
 
 export function Header({ settingsOpen, onToggleSettings, enabled, onEnabledChange, auth, onLogin, onLogout, tab, onTabChange }: HeaderProps) {
   const { loggedIn, usage } = auth;
-  const nearLimit = usage && usage.used >= usage.limit * 0.8;
   const atLimit = usage && usage.used >= usage.limit;
-
-  async function handleUpgrade() {
-    const url = await getCheckoutUrl();
-    if (url) openUrl(url);
-  }
 
   return (
     <header
@@ -165,7 +158,7 @@ export function Header({ settingsOpen, onToggleSettings, enabled, onEnabledChang
               <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ background: atLimit ? "#ef4444" : nearLimit ? "#f59e0b" : "#bb0051" }}
+                  style={{ background: atLimit ? "#ef4444" : "#bb0051" }}
                   initial={{ width: 0 }}
                   animate={{ width: usage ? `${Math.min((usage.used / usage.limit) * 100, 100)}%` : "0%" }}
                   transition={{ duration: 0.4, ease: "easeOut" }}
@@ -175,19 +168,6 @@ export function Header({ settingsOpen, onToggleSettings, enabled, onEnabledChang
                 {usage ? `${usage.used} / ${usage.limit} today` : "— / — today"}
               </span>
             </div>
-
-            {(nearLimit || atLimit) && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleUpgrade}
-                className="ml-2 flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold text-white"
-                style={{ background: "linear-gradient(135deg, #9d0044, #bb0051)" }}
-              >
-                <Zap size={10} />
-                Upgrade
-              </motion.button>
-            )}
           </div>
         </>
       )}

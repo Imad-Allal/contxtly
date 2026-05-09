@@ -1,5 +1,5 @@
 import { showButton, removeButton, showTooltip, updateTooltip, updateTooltipLogin, updateTooltipLimitReached, removeTooltip, showHint, isOwnElement } from "./ui.js";
-import { highlightSelection, getCachedTranslation, deleteWord } from "./highlight.js";
+import { highlightSelection, deleteWord, restore, getContextAndOffset } from "./highlight.js";
 
 const MAX_WORDS = 8;
 const LETTER_OR_NUM = /\p{L}|\p{N}/u;
@@ -149,18 +149,24 @@ async function translate(text, context, textOffset, range, x, y) {
   showTooltip(x, y);
 
   try {
-    const cached = await getCachedTranslation(text, context);
-    if (cached) {
-      updateTooltip(cached, false, createDeleteHandler(cached.lemma || text));
-      highlightSelection(range, text, cached);
+    const { words = [], archives = [] } = await chrome.storage.local.get(["words", "archives"]);
+    const { context: ctxWindow } = getContextAndOffset(range, text);
+    const matches = (w) => ((w.lemma || w.text) === text || w.text === text) && (w.context || "") === (ctxWindow || "");
+
+    const savedEntry = words.find(matches);
+    if (savedEntry) {
+      const translation = savedEntry.translation;
+      updateTooltip(translation, false, createDeleteHandler(translation?.lemma || text));
+      highlightSelection(range, text, translation);
       return;
     }
 
-    const { archives = [] } = await chrome.storage.local.get("archives");
-    const archivedEntry = archives.find((w) => (w.lemma || w.text) === text || w.text === text);
+    const archivedEntry = archives.find(matches);
     if (archivedEntry) {
       const translation = archivedEntry.translation;
-      updateTooltip(translation, false, createDeleteHandler(translation?.lemma || text));
+      const lemma = translation?.lemma || archivedEntry.lemma || text;
+      chrome.runtime.sendMessage({ action: "restoreWords", data: { lemmas: [lemma] } }).catch(() => {});
+      updateTooltip(translation, false, createDeleteHandler(lemma));
       highlightSelection(range, text, translation);
       return;
     }
@@ -268,3 +274,5 @@ document.addEventListener("mouseup", (e) => {
 
 document.addEventListener("mousedown", (e) => !isOwnElement(e.target) && dismissPopups());
 document.addEventListener("keydown", (e) => e.key === "Escape" && dismissPopups());
+
+restore();
