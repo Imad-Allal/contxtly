@@ -11,8 +11,8 @@ log = logging.getLogger(__name__)
 client = Groq(api_key=settings.groq_api_key)
 
 # Models
-PRIMARY_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
-FALLBACK_MODEL = "llama-3.3-70b-versatile"
+PRIMARY_MODEL = "openai/gpt-oss-120b"
+FALLBACK_MODEL = "openai/gpt-oss-20b"  # Fallback model in case of 503 errors
 
 
 def llm_call(prompt: str, model: str = PRIMARY_MODEL, json_mode: bool = True) -> dict | str:
