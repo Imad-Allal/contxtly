@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from analyzer import preload_models
 from auth import get_current_user
+from languages.german import dict_store as german_dict_store
 from config import settings
 from db import get_db, get_usage, increment_usage
 from pipeline import translate_pipeline
@@ -30,6 +31,7 @@ log = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     preload_models()
+    german_dict_store.load()
     yield
 
 
@@ -183,11 +185,10 @@ def purge_word(word_id: str, user_id: str = Depends(get_current_user)):
         .delete()
         .eq("id", word_id)
         .eq("user_id", user_id)
-        .filter("deleted_at", "not.is", "null")
         .execute()
     )
     if not result.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Word not found in trash")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Word not found")
 
 
 @app.post("/trash/{word_id}/restore", status_code=status.HTTP_200_OK)

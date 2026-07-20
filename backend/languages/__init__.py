@@ -1,7 +1,17 @@
 from languages.base import LanguageConfig, LanguageModule, LanguageAnalysis, describe_morphology
-from languages.german import German
-from languages.french import French
-from languages.english import English
+
+# German module: pick v1 or v2 based on the GERMAN_V2_ENABLED env flag.
+# Both modules share the same dict_store and detector functions.
+try:
+    from config import settings
+    _german_v2 = settings.german_v2_enabled
+except Exception:
+    _german_v2 = False
+
+if _german_v2:
+    from languages.german_v2 import German
+else:
+    from languages.german import German
 
 
 # Registry of all supported languages

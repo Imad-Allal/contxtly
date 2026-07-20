@@ -1,0 +1,11 @@
+{
+  "phenomenon": "lassen",
+  "comment": "lassen + infinitive constructions.",
+  "cases": [
+    { "sentence": "Sie lässt das Auto reparieren.","target": "reparieren","expect": { "detected": true } },
+    { "sentence": "Er lässt mich warten.",         "target": "warten",    "expect": { "detected": true } },
+    { "sentence": "Das lässt sich erklären.",      "target": "erklären",  "expect": { "detected": true } },
+    { "sentence": "Sie lässt das Auto reparieren.","target": "lässt",     "expect": { "detected": true } },
+    { "sentence": "Sie liest ein Buch.",           "target": "liest",     "expect": { "detected": false } }
+  ]
+}

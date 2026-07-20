@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import spacy
 from models import TokenRef
 from languages.german.verbs import REFLEXIVE_PRONOUNS
-from languages.german.nomen_verb_data import (
+from languages.german.dict_store import (
     NOMEN_VERB, NOMEN_VERB_INDEX,
     NOMEN_VERB_PREP, NOMEN_VERB_PREP_INDEX,
     NOMEN_VERB_REFLEXIVE,
