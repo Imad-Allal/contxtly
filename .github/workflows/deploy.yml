@@ -25,6 +25,6 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
-            docker compose down
-            docker compose up -d --build --remove-orphans
+            docker-compose down
+            docker-compose up -d --build --remove-orphans
             docker image prune -f
