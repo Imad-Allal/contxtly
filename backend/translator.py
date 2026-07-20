@@ -4,6 +4,10 @@ import time
 from groq import Groq, InternalServerError, BadRequestError
 
 from config import settings
+from prompts.word_translation import (
+    build_simple_translation_prompt,
+    build_word_translation_prompt,
+)
 from timing import record_timing
 
 log = logging.getLogger(__name__)
@@ -73,16 +77,6 @@ def translate_smart(
     """
     Combined translation: word + meaning + base form + context translation + compound parts in one LLM call.
 
-    Args:
-        word: The word to translate
-        source_lang: Source language code
-        target_lang: Target language code
-        context: Sentence context for accurate translation (will be translated too)
-        lemma: Base form of word (if different from word)
-        skip_context_translation: Skip translating context (if already cached)
-        compound_parts: Pre-split compound parts to translate (e.g., ["Kranken", "Haus"])
-        collocation_pattern: Verb+preposition pattern (e.g., "von etwas ausgehen")
-
     Returns:
         {
             "translation": str,
@@ -90,81 +84,27 @@ def translate_smart(
             "base_translation": str | None,
             "context_translation": str | None,
             "compound_parts": [("part", "base", "translation"), ...] | None,
+            "modal_translation": str | None,
         }
     """
     log.info(f"[TRANSLATE] translate_smart('{word}', {source_lang} -> {target_lang}, lemma={lemma}, collocation={collocation_pattern})")
 
-    pos_map = {
-        "DET": "determiner/article",
-        "PRON": "pronoun",
-        "VERB": "verb",
-        "NOUN": "noun",
-        "ADJ": "adjective",
-        "ADV": "adverb",
-        "ADP": "preposition",
-        "CONJ": "conjunction",
-        "CCONJ": "coordinating conjunction",
-        "SCONJ": "subordinating conjunction",
-        "PART": "particle",
-        "NUM": "numeral",
-        "INTJ": "interjection",
-    }
-    pos_instruction = ""
-    if pos and pos in pos_map:
-        pos_instruction = f'The word "{word}" is a {pos_map[pos]}. '
-
-    context_instruction = ""
-    if context:
-        context_instruction = f'{pos_instruction}The word appears in this sentence: "{context}"'
-    elif pos_instruction:
-        context_instruction = pos_instruction.rstrip()
-
-    collocation_instruction = ""
-    if collocation_pattern:
-        collocation_instruction = f"""
-CRITICAL: The word is part of the verb+preposition collocation "{collocation_pattern}".
-You must translate the COLLOCATION as a whole, giving the natural IDIOMATIC equivalent in {target_lang} — NOT a word-for-word literal translation.
-Examples of correct idiomatic translations:
-- "von etwas ausgehen" → French: "partir du principe que / supposer / estimer" (NOT "partir de")
-- "von jemandem etwas erwarten" → French: "s'attendre à quelque chose de la part de quelqu'un" (NOT "prévoir" or "attendre")
-- "auf etwas ankommen" → French: "dépendre de" (NOT "arriver sur")
-Apply the same principle: find the natural {target_lang} expression that carries the same meaning as the German collocation.
-The context_translation MUST also use this idiomatic equivalent, not a literal rendering."""
-
-    lemma_instruction = ""
-    if lemma and lemma != word:
-        lemma_instruction = f'\nAlso translate the base form (infinitive) "{lemma}" separately. Give the correct, natural dictionary translation — not a transliteration or invented word.'
-
-    modal_instruction = ""
-    if modal_verb:
-        modal_instruction = f'\nAlso translate the modal verb "{modal_verb}" as used in the context sentence. Give the conjugated translation matching the person/tense in context (e.g., "will" → "veut", "kann" → "peut", "muss" → "doit"), NOT the infinitive.'
-
-    compound_instruction = ""
-    if compound_parts:
-        parts_str = ", ".join(f'"{p}"' for p in compound_parts)
-        compound_instruction = f'\nThese are the EXACT compound word parts (do NOT split them further): {parts_str}. For each part, find its dictionary form and translate it. Keep nouns as nouns (e.g., "Gesundheit" stays "Gesundheit", not "gesund"). Only simplify declined/genitive forms (e.g., "Auslands" → "Ausland", "Kranken" → "krank"). Return exactly {len(compound_parts)} parts.'
-
-    prompt = f"""Translate "{word}" from {source_lang} to {target_lang}.
-{context_instruction}
-{collocation_instruction}
-{lemma_instruction}
-{modal_instruction}
-{compound_instruction}
-
-Return JSON with:
-- translation: {"the idiomatic translation of the COLLOCATION in " + target_lang + " (e.g., the full verbal phrase like 's''attendre à')" if collocation_pattern else "the SHORT, CONCISE dictionary translation of the word itself in " + target_lang + " — 1 to 4 words maximum, like a dictionary entry (e.g. 'être disponible', 'partir', 'maison'). Do NOT use the context sentence to build a phrase. Translate the WORD, not the sentence."}
-- meaning: one sentence in {target_lang} explaining what "{word}" means IN THIS SPECIFIC CONTEXT (use the context sentence to explain, but keep it concise)
-- base_translation: translation of the base form "{lemma}" (only if base form was provided, otherwise null){"" if skip_context_translation else f"""
-- context_translation: translate the full context sentence into {target_lang}. MUST be a real translation in {target_lang}, NOT the original German text. Return ONLY the translated sentence as a plain string — no quotes, no explanations, no original text. If context was not provided, use null."""}{f'''
-- modal_translation: conjugated translation of "{modal_verb}" matching the person/tense in context (e.g., "will" → "veut", "kann" → "peut", "muss" → "doit"). NEVER give the infinitive form.''' if modal_verb else ''}{'''
-- parts: array of objects with "part" (original), "base" (lemma/base form), and "translation" (translation of base form) for each compound part (only if compound parts were provided)''' if compound_parts else ''}
-
-Return ONLY valid JSON. Do not use guillemets (« »), curly quotes, or any special punctuation inside JSON string values — use only plain straight quotes for quoting words within strings."""
+    prompt = build_word_translation_prompt(
+        word=word,
+        source_lang=source_lang,
+        target_lang=target_lang,
+        context=context,
+        lemma=lemma,
+        skip_context_translation=skip_context_translation,
+        compound_parts=compound_parts,
+        collocation_pattern=collocation_pattern,
+        modal_verb=modal_verb,
+        pos=pos,
+    )
 
     result = llm_call(prompt, model=PRIMARY_MODEL)
 
     if isinstance(result, dict):
-        # Parse compound parts: (original_part, base_form, translation)
         translated_parts = None
         if compound_parts:
             parts = result.get("parts", [])
@@ -200,13 +140,7 @@ Return ONLY valid JSON. Do not use guillemets (« »), curly quotes, or any spec
 def translate_simple(word: str, source_lang: str, target_lang: str) -> str:
     """Simple translation - just the translated word."""
     log.info(f"[TRANSLATE] translate_simple('{word}' -> {target_lang})")
-    prompt = f"""Translate {word} from {source_lang} to {target_lang}. Return ONLY the translation, nothing else.\n\n{word}
-
-Return JSON with:
-- translation: the equivalent word/phrase in {target_lang}
-
-Return ONLY valid JSON. Do not use guillemets (« »), curly quotes, or any special punctuation inside JSON string values — use only plain straight quotes for quoting words within strings."""
-
+    prompt = build_simple_translation_prompt(word, source_lang, target_lang)
     result = llm_call(prompt, model=PRIMARY_MODEL)
     log.info(f"[TRANSLATE] Simple result: '{result}'")
     return result
